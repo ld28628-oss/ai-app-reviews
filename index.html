@@ -132,6 +132,49 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .footer { text-align: center; padding: 30px; color: var(--text-dim); font-size: 0.8em; border-top: 1px solid var(--border); }
 .empty-state { padding: 40px; text-align: center; color: var(--text-dim); }
 .empty-state .icon { font-size: 2em; margin-bottom: 8px; }
+
+/* AI Summary */
+.ai-summary-section { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 30px; }
+.ai-summary-section h2 { font-size: 1.05em; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: var(--purple); }
+.ai-summary-section h2 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); flex-shrink: 0; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.summary-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; transition: border-color 0.2s; }
+.summary-card:hover { border-color: rgba(167,139,250,0.15); }
+.summary-card.alarm { border-left: 3px solid var(--red); }
+.summary-card.warn { border-left: 3px solid var(--orange); }
+.summary-card.ok { border-left: 3px solid var(--green); }
+.summary-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.summary-card-icon { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+.summary-card-name { font-weight: 600; font-size: 0.85em; flex: 1; }
+.summary-metrics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.summary-metric { font-size: 0.74em; display: flex; align-items: center; gap: 3px; background: rgba(255,255,255,0.03); padding: 3px 7px; border-radius: 5px; color: var(--text-dim); }
+.summary-metric .change-up { color: var(--green); font-weight: 600; }
+.summary-metric .change-down { color: var(--red); font-weight: 600; }
+.summary-metric .change-flat { color: var(--text-dim); }
+.summary-tags-row { display: flex; gap: 4px; flex-wrap: wrap; font-size: 0.7em; }
+.summary-tag-chip { padding: 2px 7px; border-radius: 7px; background: rgba(167,139,250,0.08); color: var(--purple); white-space: nowrap; }
+.summary-tag-chip.critical { background: rgba(248,113,113,0.12); color: var(--red); }
+.summary-tag-chip .tg-num { opacity: 0.7; margin-left: 2px; }
+.summary-empty { padding: 8px 0; font-size: 0.72em; color: var(--text-dim); }
+.highlight-section { margin-top: 16px; }
+.highlight-section h3 { font-size: 0.86em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
+.highlight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 750px) { .highlight-grid { grid-template-columns: 1fr; } }
+.highlight-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; }
+.highlight-box.low { border-left: 3px solid var(--red); }
+.highlight-box.high { border-left: 3px solid var(--green); }
+.highlight-box .hl-app { font-size: 0.75em; color: var(--text-dim); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+.highlight-box .hl-app img { width: 17px; height: 17px; border-radius: 4px; }
+.highlight-box .hl-text { font-size: 0.8em; line-height: 1.45; color: rgba(255,255,255,0.72); margin-bottom: 6px; word-break: break-word; }
+.highlight-box .hl-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.highlight-box .hl-rating { font-size: 0.72em; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+.highlight-box .hl-rating.r1 { background: rgba(239,68,68,0.15); color: #ef4444; }
+.highlight-box .hl-rating.r2 { background: rgba(249,115,22,0.15); color: #f97316; }
+.highlight-box .hl-rating.r5 { background: rgba(34,197,94,0.15); color: #22c55e; }
+.highlight-box .hl-rating.r4 { background: rgba(132,204,22,0.15); color: #84cc16; }
+.highlight-box .hl-tags { display: flex; gap: 3px; flex-wrap: wrap; }
+.highlight-box .hl-tags span { font-size: 0.66em; padding: 1px 6px; border-radius: 5px; background: rgba(239,68,68,0.1); color: var(--red); }
+.highlight-box.high .hl-tags span { background: rgba(52,211,153,0.1); color: var(--green); }
 </style>
 </head>
 <body>
@@ -143,6 +186,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     <label for="dateSelect">📅 选择日期</label>
     <select class="date-select" id="dateSelect" onchange="onDateChange(this.value)"></select>
     <span class="date-info" id="dateStats"></span>
+  </div>
+</div>
+
+<!-- AI Summary Section -->
+<div class="ai-summary-section" id="aiSummary" style="display:none">
+  <h2><span class="dot"></span> AI 竞品洞察 · <span id="summaryDate">-</span></h2>
+  <div class="summary-grid" id="summaryGrid"></div>
+  <div class="highlight-section" id="lowSection" style="display:none">
+    <h3>🔴 低分预警 · 重点关注</h3>
+    <div class="highlight-grid" id="lowHighlightGrid"></div>
+  </div>
+  <div class="highlight-section" id="highSection" style="display:none">
+    <h3>🟢 高分参考 · 价值评论</h3>
+    <div class="highlight-grid" id="highHighlightGrid"></div>
   </div>
 </div>
 
@@ -210,18 +267,16 @@ function kwMatch(text, keyword) {
 }
 
 const TAG_RULES = [
-  { id: 'ads', label: '📢 广告抱怨', keywords: ['ads', 'advertising', 'advertisement', 'too many ads', 'full of ads', 'ads everywhere'], weight: 3 },
-  { id: 'pricing', label: '💰 付费订阅', keywords: ['money', 'greedy', 'pay', 'premium', 'subscription', 'c.ai+', 'expensive', 'overpriced', 'price', 'paywall', 'charged', 'paying'], weight: 2 },
-  { id: 'verification', label: '🆔 年龄验证', keywords: ['verification', 'verify', 'government id', 'age verification', 'upload your id', 'not 18', 'under 18'], weight: 3 },
-  { id: 'update', label: '🔄 更新问题', keywords: ['update', 'updates', 'updated', 'new version', 'latest update', 'after this update', 'become worse', 'got worse'], weight: 2 },
-  { id: 'ai_quality', label: '🤖 AI回复质量', keywords: ['response', 'replies', 'memory loss', 'keep forgetting', 'repetitive', 'dumb', 'stupid ai', 'bot forgot'], weight: 1 },
-  { id: 'adult_filter', label: '🎨 内容过滤', keywords: ['nsfw', "can't do 18+", 'censor', 'censored', 'content filter', 'blocked word', "can't say", 'filter'], weight: 2 },
-  { id: 'limit', label: '🚫 功能限制', keywords: ['limit', 'limited', 'restriction', 'restricted', 'swipe limit', 'message limit', 'chat limit', 'text limit', 'reading mode', 'can only read'], weight: 3 },
-  { id: 'positive', label: '❤️ 正面评价', keywords: ['love this', 'love it', 'great app', 'amazing app', 'best app', 'so good', 'really good', 'addicted', 'enjoy', 'wonderful', 'excellent', 'perfect', 'recommend', 'five star', '5 star'], weight: 2 },
-  { id: 'bug', label: '🐛 技术问题', keywords: ['bug', 'glitch', 'crash', 'buggy', 'error', 'broken', 'not working', "doesn't work", 'doesnt work', 'freeze', 'lag', 'loading'], weight: 2 },
-  { id: 'privacy', label: '🔒 隐私顾虑', keywords: ['privacy', 'personal data', 'identity', 'id scan', 'data collection', 'track', 'spy'], weight: 2 },
-  { id: 'decline', label: '📉 产品衰退', keywords: ['used to be', 'miss the old', 'bring back', 'gone downhill', 'went downhill', 'so bad now', 'was better', 'was great', 'declined', 'ruined', 'old version', 'old c.ai'], weight: 2 },
-  { id: 'feature_req', label: '💡 功能建议', keywords: ['please add', 'wish', 'need to add', 'should add', 'would be nice', 'suggest', 'i hope', 'feature request', 'can you add', 'we need'], weight: 1 },
+  { id: 'safety', label: '🔞 内容安全', keywords: ['nsfw', 'inappropriate', 'sexual', 'explicit', 'underage', 'minor', 'child', 'porn', 'nude', 'naked', 'violence', 'violent', 'gore', 'dangerous', 'predator', 'groom', 'protect child', 'not safe'], weight: 3 },
+  { id: 'ads', label: '📢 广告体验', keywords: ['ads', 'advertising', 'advertisement', 'too many ads', 'full of ads', 'ads everywhere', 'popup ad', 'pop-up ad', 'banner ad', 'video ad', 'unskippable', 'forced ad', 'remove ads', 'no ads', 'ads are annoying'], weight: 3 },
+  { id: 'subscription', label: '💳 付费订阅', keywords: ['money', 'greedy', 'pay', 'premium', 'subscription', 'c.ai+', 'expensive', 'overpriced', 'price', 'paywall', 'charged', 'paying', 'cancel subscription', 'refund', 'free trial', 'pricing', 'not worth', 'waste of money'], weight: 3 },
+  { id: 'censorship', label: '🎨 审核过严', keywords: ['censor', 'censored', 'content filter', 'blocked word', "can't say", "wont let me", "won't let", 'filter too strict', 'overly filtered', 'message blocked', 'chat filter', 'restricted chat', 'too many restrictions', "can't talk about", 'shadow ban', 'shadowban', 'restrictive', 'over censored'], weight: 3 },
+  { id: 'ai_quality', label: '🤖 AI质量', keywords: ['response quality', 'bad replies', 'memory loss', 'keep forgetting', 'repetitive', 'dumb', 'stupid ai', 'bot forgot', 'personality changed', 'character broke', 'out of character', 'bad response', 'ai is worse', 'worse responses', 'boring reply', 'generic reply', 'no personality'], weight: 2 },
+  { id: 'bug', label: '🐛 技术Bug', keywords: ['bug', 'glitch', 'crash', 'buggy', 'error', 'broken', 'not working', "doesn't work", 'doesnt work', 'freeze', 'lag', 'loading stuck', "won't load", 'wont load', 'keep crashing', 'app crash', 'blank screen', 'not responding', 'stuck on'], weight: 2 },
+  { id: 'decline', label: '📉 产品衰退', keywords: ['used to be', 'miss the old', 'bring back', 'gone downhill', 'went downhill', 'so bad now', 'was better', 'was great', 'declined', 'ruined', 'old version', 'old c.ai', 'downgrade', 'worse than before', 'what happened to'], weight: 2 },
+  { id: 'feature_req', label: '💡 功能建议', keywords: ['please add', 'wish', 'need to add', 'should add', 'would be nice', 'suggest', 'i hope', 'feature request', 'can you add', 'we need', 'suggestion', 'add feature', 'wishlist', 'would love'], weight: 1 },
+  { id: 'privacy_verify', label: '🆔 验证隐私', keywords: ['verification', 'verify', 'government id', 'age verification', 'upload your id', 'under 18', 'id check', 'identity check', 'privacy', 'personal data', 'id scan', 'data collection', 'track', 'spy'], weight: 2 },
+  { id: 'limit', label: '🚫 功能限制', keywords: ['limit', 'limited', 'restriction', 'restricted', 'swipe limit', 'message limit', 'chat limit', 'text limit', 'reading mode', 'can only read', 'daily limit', 'cap', 'reached limit', 'rate limit'], weight: 2 },
 ];
 
 function classifyReview(text, rating) {
@@ -233,11 +288,10 @@ function classifyReview(text, rating) {
       if (kwMatch(lower, kw)) { tags.push({ id: rule.id, label: rule.label, weight: rule.weight }); break; }
     }
   }
-  if (rating >= 4 && !tags.some(t => t.id === 'positive')) {
-    const hasNeg = tags.some(t => ['ads','pricing','bug','verification','limit','decline','adult_filter'].includes(t.id));
-    if (!hasNeg) tags.push({ id: 'positive', label: '❤️ 正面评价', weight: 1 });
+  // 无匹配标签的低分评论归入"其他问题"
+  if (tags.length === 0 && rating <= 2) {
+    tags.push({ id: 'other', label: '⚠️ 其他问题', weight: 1 });
   }
-  if (rating <= 2 && tags.length === 0) tags.push({ id: 'negative', label: '👎 负面反馈', weight: 1 });
   tags.sort((a, b) => b.weight - a.weight);
   return tags.slice(0, 3);
 }
@@ -408,6 +462,160 @@ function renderAppCards() {
       </div>` : '<div style="font-size:0.8em;color:var(--text-dim);padding:4px 0">⛔ 未上架 Google Play</div>'}
     </div>`;
   }).join('');
+}
+
+// ============ AI Summary ============
+function computeAISummary() {
+  const today = currentDate;
+  const yesterday = allDates.length > 1 ? allDates[1] : null;
+  if (!today || !fullData) return [];
+
+  return (fullData.apps || []).map(app => {
+    const gp = app.googleplay || {};
+    const gpToday = gp.per_date_stats?.[today] || {};
+    const gpYesterday = yesterday ? (gp.per_date_stats?.[yesterday] || {}) : {};
+
+    const todayCnt = gpToday.count || 0;
+    const yesCnt = gpYesterday.count || 0;
+    const todayAvg = gpToday.avg_rating || 0;
+    const yesAvg = gpYesterday.avg_rating || 0;
+
+    // Count change %
+    const countChg = yesCnt > 0 ? Math.round((todayCnt - yesCnt) / yesCnt * 100) : (todayCnt > 0 ? 100 : 0);
+    // Rating change
+    const ratingDelta = yesAvg > 0 ? (todayAvg - yesAvg).toFixed(2) : 0;
+
+    // Tag distribution from today's reviews
+    const allReviews = getAllReviewsForApp(app.name);
+    const todayReviews = allReviews.filter(r => r.review_date === today);
+    todayReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
+    const tagCounts = {};
+    todayReviews.forEach(r => { (r._tags || []).forEach(t => { tagCounts[t.label] = (tagCounts[t.label] || 0) + 1; }); });
+    const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+    // Low rating cases (1-2 star, meaningful text)
+    const lowCases = todayReviews
+      .filter(r => r.rating <= 2 && r.text && r.text.length > 25)
+      .sort((a, b) => a.rating - b.rating || b.text.length - a.text.length)
+      .slice(0, 1);
+
+    // High value positive (4-5 star, substantial text)
+    const highCases = todayReviews
+      .filter(r => r.rating >= 4 && r.text && r.text.length > 50)
+      .sort((a, b) => b.text.length - a.text.length)
+      .slice(0, 1);
+
+    return {
+      name: app.name,
+      icon: gp.icon_url || (app.appstore || {}).icon_url || '',
+      todayRating: todayAvg,
+      ratingDelta: parseFloat(ratingDelta),
+      todayCount: todayCnt,
+      countChg,
+      topTags,
+      lowCases,
+      highCases,
+      alarmLevel: todayAvg <= 2 ? 'alarm' : (todayAvg <= 3.5 ? 'warn' : 'ok'),
+    };
+  });
+}
+
+function renderAISummary() {
+  const summaries = computeAISummary();
+  if (!summaries.length) return;
+
+  const section = document.getElementById('aiSummary');
+  section.style.display = '';
+  document.getElementById('summaryDate').textContent = currentDate;
+
+  // Summary cards: quick metrics per app
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = summaries.map(s => {
+    const rDeltaHtml = s.ratingDelta > 0
+      ? `<span class="change-up">↑${s.ratingDelta.toFixed(1)}</span>`
+      : (s.ratingDelta < 0 ? `<span class="change-down">↓${Math.abs(s.ratingDelta).toFixed(1)}</span>` : '<span class="change-flat">→0</span>');
+    const cChgHtml = s.countChg > 0
+      ? `<span class="change-up">+${s.countChg}%</span>`
+      : (s.countChg < 0 ? `<span class="change-down">${s.countChg}%</span>` : '<span class="change-flat">0%</span>');
+    const ratingColor = getRatingColor(s.todayRating);
+
+    const tagsHtml = s.topTags.length > 0
+      ? s.topTags.map(([label, cnt]) => {
+          const isCrit = ['🔞 内容安全','📢 广告体验','🎨 审核过严'].some(t => label.startsWith(t));
+          return `<span class="summary-tag-chip${isCrit ? ' critical' : ''}">${label}<span class="tg-num">${cnt}</span></span>`;
+        }).join('')
+      : '<span class="summary-empty">暂无标签数据</span>';
+
+    return `<div class="summary-card ${s.alarmLevel}">
+      <div class="summary-card-header">
+        ${s.icon ? `<img class="summary-card-icon" src="${s.icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
+        <span class="summary-card-name">${s.name}</span>
+      </div>
+      <div class="summary-metrics">
+        <span class="summary-metric">日评分 <b style="color:${ratingColor}">${s.todayRating.toFixed(2)}</b> ${rDeltaHtml}</span>
+        <span class="summary-metric">评论 <b>${s.todayCount}</b> ${cChgHtml}</span>
+      </div>
+      <div class="summary-tags-row">${tagsHtml}</div>
+    </div>`;
+  }).join('');
+
+  // Low rating highlights
+  const lowAll = [];
+  summaries.forEach(s => {
+    s.lowCases.forEach(c => lowAll.push({ app: s.name, icon: s.icon, ...c }));
+  });
+  lowAll.sort((a, b) => (a.rating || 3) - (b.rating || 3));
+  const topLow = lowAll.slice(0, 4);
+
+  const lowSec = document.getElementById('lowSection');
+  const lowGrid = document.getElementById('lowHighlightGrid');
+  if (topLow.length > 0) {
+    lowSec.style.display = '';
+    lowGrid.innerHTML = topLow.map(c => {
+      const text = c.text.length > 180 ? c.text.slice(0, 177) + '...' : c.text;
+      const tags = (c._tags || []).map(t => `<span>${t.label}</span>`).join('');
+      return `<div class="highlight-box low">
+        <div class="hl-app">
+          ${c.icon ? `<img src="${c.icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
+          <b>${c.app}</b> · ${c.review_date || '-'}
+        </div>
+        <div class="hl-text">${escapeHtml(text)}</div>
+        <div class="hl-meta">
+          <span class="hl-rating r${c.rating}">${c.rating}★</span>
+          <div class="hl-tags">${tags}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } else { lowSec.style.display = 'none'; }
+
+  // High value highlights
+  const highAll = [];
+  summaries.forEach(s => {
+    s.highCases.forEach(c => highAll.push({ app: s.name, icon: s.icon, ...c }));
+  });
+  highAll.sort((a, b) => b.text.length - a.text.length);
+  const topHigh = highAll.slice(0, 4);
+
+  const highSec = document.getElementById('highSection');
+  const highGrid = document.getElementById('highHighlightGrid');
+  if (topHigh.length > 0) {
+    highSec.style.display = '';
+    highGrid.innerHTML = topHigh.map(c => {
+      const text = c.text.length > 200 ? c.text.slice(0, 197) + '...' : c.text;
+      const tags = (c._tags || []).map(t => `<span>${t.label}</span>`).join('');
+      return `<div class="highlight-box high">
+        <div class="hl-app">
+          ${c.icon ? `<img src="${c.icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
+          <b>${c.app}</b> · ${c.review_date || '-'}
+        </div>
+        <div class="hl-text">${escapeHtml(text)}</div>
+        <div class="hl-meta">
+          <span class="hl-rating r${c.rating}">${c.rating}★</span>
+          <div class="hl-tags">${tags}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } else { highSec.style.display = 'none'; }
 }
 
 // ============ Charts ============
@@ -759,6 +967,7 @@ function onDateChange(date) {
   renderDateSelector();
   renderAppCards();
   renderOverallChart();
+  renderAISummary();
   renderAppTabs();
 }
 
@@ -795,6 +1004,7 @@ async function loadData() {
       renderAppTabs(); // re-render tabs with correct review counts
       renderTagAppSelector(); // init tag chart app selector
       switchTagApp(tagChartApp); // render initial tag chart
+      renderAISummary(); // AI summary
     } catch (e) {
       console.warn('reviews.json not available (reviews disabled):', e.message);
       reviewsData = {};
