@@ -120,6 +120,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .app-tab.active { background: rgba(167,139,250,0.15); border-color: var(--purple); color: var(--purple); }
 .app-tab img { width: 18px; height: 18px; border-radius: 4px; }
 
+/* Store switch */
+.store-switch { display: flex; gap: 6px; margin-bottom: 12px; }
+.store-switch-btn { padding: 6px 18px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: var(--text-dim); cursor: pointer; font-size: 0.82em; transition: all 0.2s; }
+.store-switch-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.store-switch-btn.active { color: #fff; font-weight: 500; }
+.store-switch-btn.active.gp { background: rgba(52,211,153,0.15); border-color: var(--green); color: var(--green); }
+.store-switch-btn.active.as { background: rgba(96,165,250,0.15); border-color: var(--blue); color: var(--blue); }
+.store-switch-btn .badge { font-size: 0.7em; opacity: 0.6; margin-left: 2px; }
+
 .footer { text-align: center; padding: 30px; color: var(--text-dim); font-size: 0.8em; border-top: 1px solid var(--border); }
 .empty-state { padding: 40px; text-align: center; color: var(--text-dim); }
 .empty-state .icon { font-size: 2em; margin-bottom: 8px; }
@@ -161,8 +170,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
   <!-- Review Details -->
   <div class="section-title">
-    <div class="section-title-left"><span class="dot" style="background:var(--green)"></span> Google Play 评论详情</div>
+    <div class="section-title-left"><span class="dot" id="reviewDot" style="background:var(--green)"></span> <span id="reviewTitle">Google Play 评论详情</span></div>
     <div class="review-meta-bar" id="reviewMetaBar"></div>
+  </div>
+  <div class="store-switch" id="storeSwitch">
+    <span class="store-switch-btn gp active" onclick="switchStore('googleplay')">🟢 Google Play</span>
+    <span class="store-switch-btn as" onclick="switchStore('appstore')">🔵 App Store <span class="badge">待接入</span></span>
   </div>
   <div class="app-tabs" id="appTabs"></div>
   <div class="review-list" id="reviewList">
@@ -236,6 +249,7 @@ let appData = [];         // current date's app data
 let allDates = [];        // all available dates (desc)
 let currentDate = '';
 let currentApp = null;
+let currentStore = 'googleplay';  // 'googleplay' | 'appstore'
 let activeReviewDate = 'all';
 let activeRating = 'all';
 let activeTag = 'all';
@@ -440,19 +454,29 @@ function renderTrendChart() {
   }
   const dates = [...dateSet].sort();  // ascending for trend
 
-  // App colors
-  const COLORS = ['#60a5fa','#34d399','#a78bfa','#fb923c','#f472b6','#fbbf24','#f87171'];
+  // Trim to dates that actually have data (at least one app with nonzero count)
+  const APP_COLORS = ['#60a5fa','#34d399','#a78bfa','#fb923c','#f472b6','#fbbf24','#f87171'];
+  const hasData = dates.map(d => {
+    return (fullData.apps || []).some(app => {
+      const s = (app.googleplay?.per_date_stats || {})[d];
+      return s && s.count > 0;
+    });
+  });
+  const firstIdx = hasData.findIndex(Boolean);
+  const lastIdx = hasData.findLastIndex ? hasData.findLastIndex(Boolean) : hasData.map(Boolean).lastIndexOf(true);
+  const chartDates = firstIdx >= 0 ? dates.slice(firstIdx, lastIdx + 1) : dates;
+
   const datasets = (fullData.apps || []).map((app, i) => {
     const stats = app.googleplay?.per_date_stats || {};
-    const data = dates.map(d => {
+    const data = chartDates.map(d => {
       const s = stats[d];
       return (s && s.count > 0) ? s.avg_rating : null;
     });
     return {
       label: app.name,
       data,
-      borderColor: COLORS[i % COLORS.length],
-      backgroundColor: COLORS[i % COLORS.length] + '20',
+      borderColor: APP_COLORS[i % APP_COLORS.length],
+      backgroundColor: APP_COLORS[i % APP_COLORS.length] + '20',
       borderWidth: 2,
       pointRadius: 4,
       pointHoverRadius: 6,
@@ -463,7 +487,7 @@ function renderTrendChart() {
 
   trendChart = new Chart(ctx, {
     type: 'line',
-    data: { labels: dates, datasets },
+    data: { labels: chartDates, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
@@ -588,32 +612,65 @@ function setReviewFilter(type, value) {
 // ============ App Tabs ============
 function renderAppTabs() {
   const tabs = document.getElementById('appTabs');
-  const appsWithReviews = (fullData.apps || []).filter(a => {
-    const rd = reviewsData[a.name] || {};
-    const perDate = rd.per_date_reviews || {};
-    const legacy = rd.target_reviews || [];
-    return Object.values(perDate).some(arr => arr.length > 0) || legacy.length > 0;
+  // For Google Play: filter apps with GP reviews; for App Store: show all apps (count=0 for now)
+  const allApps = (fullData.apps || []).filter(a => {
+    if (currentStore === 'googleplay') {
+      const rd = reviewsData[a.name] || {};
+      const perDate = rd.per_date_reviews || {};
+      const legacy = rd.target_reviews || [];
+      return Object.values(perDate).some(arr => arr.length > 0) || legacy.length > 0;
+    }
+    return true; // App Store: show all
   });
 
-  tabs.innerHTML = appsWithReviews.map((a, i) => {
+  tabs.innerHTML = allApps.map((a, i) => {
     const icon = a.googleplay?.icon_url || a.appstore?.icon_url || '';
-    const rd = reviewsData[a.name] || {};
-    const perDate = rd.per_date_reviews || {};
-    const legacy = rd.target_reviews || [];
-    const total = Object.values(perDate).reduce((s, arr) => s + arr.length, 0) +
-                  legacy.filter(r => !Object.values(perDate).flat().some(pr => pr.review_id === r.review_id)).length;
+    let total = 0;
+    if (currentStore === 'googleplay') {
+      const rd = reviewsData[a.name] || {};
+      const perDate = rd.per_date_reviews || {};
+      const legacy = rd.target_reviews || [];
+      total = Object.values(perDate).reduce((s, arr) => s + arr.length, 0) +
+              legacy.filter(r => !Object.values(perDate).flat().some(pr => pr.review_id === r.review_id)).length;
+    }
     return `<span class="app-tab ${(currentApp === a.name || (i===0 && !currentApp)) ? 'active' : ''}" onclick="showReviews('${a.name}')">
       ${icon ? `<img src="${icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
-      ${a.name} (${total})
+      ${a.name} ${currentStore === 'googleplay' ? `(${total})` : ''}
     </span>`;
   }).join('');
 
-  if (appsWithReviews.length > 0 && !currentApp) {
-    currentApp = appsWithReviews[0].name;
+  // Only auto-select first app if we're on Google Play
+  if (currentStore === 'googleplay' && allApps.length > 0 && !currentApp) {
+    currentApp = allApps[0].name;
+    showReviews(currentApp);
+  } else if (allApps.length > 0 && (!currentApp || !allApps.some(a => a.name === currentApp))) {
+    currentApp = allApps[0].name;
     showReviews(currentApp);
   } else if (currentApp) {
     showReviews(currentApp);
   }
+}
+
+// ============ Store Switch ============
+function switchStore(store) {
+  currentStore = store;
+  // Update store switch buttons
+  document.querySelectorAll('.store-switch-btn').forEach(b => {
+    b.classList.toggle('active', b.classList.contains(store === 'googleplay' ? 'gp' : 'as'));
+  });
+  // Update section title
+  const dot = document.getElementById('reviewDot');
+  const title = document.getElementById('reviewTitle');
+  if (store === 'googleplay') {
+    dot.style.background = 'var(--green)';
+    title.textContent = 'Google Play 评论详情';
+  } else {
+    dot.style.background = 'var(--blue)';
+    title.textContent = 'App Store 评论详情';
+  }
+  // Re-render app tabs for the selected store
+  currentApp = null;
+  renderAppTabs();
 }
 
 // ============ Review Display ============
@@ -622,6 +679,28 @@ function showReviews(appName) {
   document.querySelectorAll('.app-tab').forEach(t => {
     t.classList.toggle('active', t.textContent.trim().startsWith(appName));
   });
+
+  const list = document.getElementById('reviewItems');
+  const filterBars = document.getElementById('reviewList');
+
+  // App Store: show empty state
+  if (currentStore === 'appstore') {
+    document.getElementById('reviewMetaBar').innerHTML = `共 0 条 · App Store 评论数据待接入`;
+    document.getElementById('dateFilterBar').style.display = 'none';
+    document.getElementById('ratingFilterBar').style.display = 'none';
+    document.getElementById('tagFilterBar').style.display = 'none';
+    list.innerHTML = `<div class="empty-state">
+      <div class="icon">📱</div>
+      <div style="margin-bottom:6px;">暂无 App Store 评论数据</div>
+      <div style="font-size:0.8em;color:var(--text-dim);">待后续接入后同步，届时可切换查看</div>
+    </div>`;
+    return;
+  }
+
+  // Google Play: show reviews as before
+  document.getElementById('dateFilterBar').style.display = '';
+  document.getElementById('ratingFilterBar').style.display = '';
+  document.getElementById('tagFilterBar').style.display = '';
 
   const allReviews = getAllReviewsForApp(appName);
   allReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
@@ -640,7 +719,6 @@ function showReviews(appName) {
     `${activeRating !== 'all' ? ' · ' + activeRating + '★' : ''}` +
     `${activeTag !== 'all' ? ' · ' + activeTag : ''}`;
 
-  const list = document.getElementById('reviewItems');
   if (reviews.length === 0) {
     list.innerHTML = `<div class="empty-state"><div class="icon">🔍</div>无匹配评论</div>`;
     return;
