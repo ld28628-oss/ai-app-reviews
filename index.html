@@ -191,6 +191,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .ai-summary-text .highlight-red { color: var(--red); font-weight: 600; }
 .ai-summary-text .highlight-green { color: var(--green); font-weight: 600; }
 .ai-summary-text .highlight-orange { color: var(--orange); font-weight: 600; }
+.ai-summary-text .highlight-warn { color: var(--orange); font-weight: 600; }
+.ai-summary-text .tag-chip-inline { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.85em; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); }
 .ai-summary-week { font-size: 0.78em; color: var(--text-dim); margin-bottom: 8px; }
 
 /* CN note on highlights */
@@ -679,19 +681,71 @@ function computeAISummary() {
     // Find the most common tag
     const dominantTag = topTags.length > 0 ? topTags[0][0] : '';
 
+    // Daily breakdown (for anomaly detection)
+    const gpDaily = week.dates.map(d => {
+      const s = gpStats[d];
+      return s && s.count > 0 ? { date: d.slice(5), avg: +s.avg_rating.toFixed(2), count: s.count } : null;
+    }).filter(Boolean);
+    const asDaily = week.dates.map(d => {
+      const revs = (asData.per_date_reviews || {})[d] || [];
+      if (revs.length === 0) return null;
+      const ratings = revs.map(r => r.rating).filter(r => r > 0);
+      if (ratings.length === 0) return null;
+      return { date: d.slice(5), avg: +(ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2), count: ratings.length };
+    }).filter(Boolean);
+
+    // "其他问题" sub-category analysis
+    const otherBreakdown = breakdownOtherReviews(weekReviews);
+
     return {
       name: app.name,
       icon: gp.icon_url || (app.appstore || {}).icon_url || '',
       gpAvg, gpRatingDelta: parseFloat(gpRatingDelta), gpWeekCount, gpCountChg, gpPrevCount,
       asAvg, asRatingDelta: parseFloat(asRatingDelta), asWeekCount, asCountChg, asPrevCount,
       totalWeekReviews, ratingDist,
+      gpDaily, asDaily,
       topTags, dominantTag,
+      otherBreakdown,
       lowCases, highCases,
       alarmLevel: gpAvg > 0 && gpAvg <= 2 ? 'alarm' : (gpAvg > 0 && gpAvg <= 3.5 ? 'warn' : 'ok'),
     };
   });
 
   return { week, summaries };
+}
+
+// "其他问题" 子标签细拆规则 — 用于在 AI 总结中展开具体问题
+const OTHER_SUB_RULES = [
+  { label: '版本/更新变动引发不满', keywords: ['update', 'updates', 'updated', 'new version', 'version change', 'changed the', 'new challenge'] },
+  { label: '聊天数据/历史对话丢失', keywords: ['lost', 'deleted', 'erased', 'disappeared', 'gone', 'archive', 'archived', 'missing chat', 'removed', 'all my chats', 'all my bot', 'my conversations'] },
+  { label: '账号封禁/登录异常', keywords: ['login', 'log in', 'sign in', 'banned', 'ban me', 'blocked me', 'suspended', 'temporary ban', 'banned me'] },
+  { label: '用户流失/转向竞品', keywords: ['other app', 'better app', 'switch to', 'use instead', 'alternative', 'chatgpt', 'emochi', 'talkie', 'delete this', 'uninstall', 'quitting', 'leaving this'] },
+  { label: '心理健康/成瘾担忧', keywords: ['mental health', 'depress', 'anxiety', 'addict', 'addictive', 'lonely', 'loneliness', 'killing soul', 'ruin life', 'ruining people'] },
+  { label: '纯负面情绪/无实质内容', keywords: ['terrible', 'horrible', 'worst app', 'awful', 'sucks', 'garbage', 'trash app', 'hate it', 'useless', 'not good', 'so bad', 'waste of time', 'trashy'] },
+];
+
+// 对"其他问题"类评论做细拆统计
+function breakdownOtherReviews(reviews) {
+  if (!reviews || reviews.length === 0) return { total: 0, breakdown: [] };
+  const otherReviews = reviews.filter(r => {
+    const tags = r._tags || classifyReview(r.text, r.rating);
+    return tags.some(t => t.id === 'other');
+  });
+  if (otherReviews.length === 0) return { total: 0, breakdown: [] };
+
+  const counts = {};
+  for (const rule of OTHER_SUB_RULES) {
+    const cnt = otherReviews.filter(r => r.text && r.text.length > 0 && rule.keywords.some(kw => r.text.toLowerCase().includes(kw))).length;
+    if (cnt > 0) counts[rule.label] = cnt;
+  }
+  const classified = Object.values(counts).reduce((a, b) => a + b, 0);
+  const leftover = otherReviews.length - classified;
+  if (leftover > 0) counts['其他零散问题'] = leftover;
+
+  return {
+    total: otherReviews.length,
+    breakdown: Object.entries(counts).sort((a, b) => b[1] - a[1]),
+  };
 }
 
 // Simple English-to-Chinese key concept mapper for summary notes
@@ -725,78 +779,142 @@ function renderAISummary() {
   const totalAS = summaries.reduce((s, a) => s + a.asWeekCount, 0);
   const allWeekReviews = summaries.reduce((s, a) => s + a.totalWeekReviews, 0);
 
-  // Find apps sorted by GP rating
-  const byGpRating = [...summaries].filter(s => s.gpAvg > 0).sort((a, b) => b.gpAvg - a.gpAvg);
-  const best = byGpRating[0];
-  const worst = byGpRating[byGpRating.length - 1];
-
   // Worst low-score cases
   const allLowCases = [];
   summaries.forEach(s => s.lowCases.forEach(c => allLowCases.push({ app: s.name, ...c })));
   allLowCases.sort((a, b) => (a.rating || 3) - (b.rating || 3));
   const topLow = allLowCases.slice(0, 3);
 
-  // Aggregate dominant tags across all apps
-  const globalTagCounts = {};
-  summaries.forEach(s => s.topTags.forEach(([label, cnt]) => { globalTagCounts[label] = (globalTagCounts[label] || 0) + cnt; }));
-  const topGlobalTags = Object.entries(globalTagCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
-
   const posChange = s => s > 0 ? '↑' + s : (s < 0 ? '↓' + Math.abs(s) : '→0');
 
   let summaryHtml = `<div class="ai-summary-week">📅 统计周期：${week.friday} ~ ${week.thursday}（上周五 至 本周四）· 覆盖 ${summaries.length} 款竞品 · 共 ${allWeekReviews} 条用户评论（GP ${totalGP}条 + App Store ${totalAS}条）</div>`;
 
-  // Paragraph 1: Overall situation
-  summaryHtml += `<p>📊 <b>整体态势：</b>`;
+  // ===== Paragraph 1: 整体态势（按平台拆分，每日异常检测）=====
+  summaryHtml += `<p style="font-size:16px;font-weight:700;margin:20px 0 10px;">📊 整体态势</p>`;
 
-  // Mention best and worst
-  if (best && best.gpAvg > 0) {
-    summaryHtml += `Google Play 侧，<span class="highlight-stat">${best.name}</span> 周均评分 <span class="highlight-green">${best.gpAvg.toFixed(2)}★</span> 领跑`;
-    if (best.gpRatingDelta > 0) summaryHtml += `（环比 <span class="highlight-green">↑${best.gpRatingDelta.toFixed(1)}</span>）`;
-    else if (best.gpRatingDelta < 0) summaryHtml += `（环比 <span class="highlight-red">↓${Math.abs(best.gpRatingDelta).toFixed(1)}</span>）`;
-    summaryHtml += `；`;
-  }
-  if (worst && worst !== best && worst.gpAvg > 0) {
-    summaryHtml += `<span class="highlight-stat">${worst.name}</span> 评分垫底为 <span class="highlight-red">${worst.gpAvg.toFixed(2)}★</span>`;
-    if (worst.gpRatingDelta < 0) summaryHtml += `（环比 <span class="highlight-red">↓${Math.abs(worst.gpRatingDelta).toFixed(1)}</span>，持续下滑）`;
-    summaryHtml += `。`;
-  }
-  summaryHtml += `</p>`;
+  // Helper: analyze daily anomaly for a platform's daily data
+  function dailyAnomalyReport(dailyData, appName, platform) {
+    if (!dailyData || dailyData.length < 3) return '';
+    const avgs = dailyData.map(d => d.avg);
+    const mean = avgs.reduce((a, b) => a + b, 0) / avgs.length;
+    const maxDev = Math.max(...avgs.map(a => Math.abs(a - mean)));
+    if (maxDev <= 0.3) return ''; // 平稳，不报告异常
 
-  // Paragraph 2: Key issues summary
-  if (topGlobalTags.length > 0) {
-    summaryHtml += `<p>🔍 <b>核心问题：</b>本周用户反馈集中在 `;
-    summaryHtml += topGlobalTags.map(([label, cnt], i) => {
-      const isCrit = ['🔞 内容安全', '📢 广告体验', '🎨 审核过严'].some(t => label.startsWith(t));
-      return `<span class="${isCrit ? 'highlight-red' : 'highlight-orange'}">${label}</span>（${cnt}次提及）`;
-    }).join('、');
-    summaryHtml += `。`;
-    // Add per-app dominant issue
-    const issueApps = summaries.filter(s => s.dominantTag && s.gpWeekCount > 0);
-    if (issueApps.length > 1) {
-      summaryHtml += `其中 `;
-      summaryHtml += issueApps.map(s => `<span class="highlight-stat">${s.name}</span> 最大痛点为「${s.dominantTag}」`).join('，');
-      summaryHtml += `。`;
+    // Find anomaly days
+    const anomalyDays = dailyData.filter(d => Math.abs(d.avg - mean) > 0.3);
+    if (anomalyDays.length === 0) return '';
+
+    let report = `<span class="highlight-stat">${appName}</span>（${platform}）日均波动 ${maxDev.toFixed(1)}★`;
+    const parts = [];
+    for (const d of anomalyDays) {
+      const dev = +(d.avg - mean).toFixed(1);
+      const dir = dev > 0 ? '↑' : '↓';
+      let reason = '';
+      if (d.count <= 3) reason = '量级太小（≤3条）';
+      else if (dev < -0.3) reason = `该日评分偏低，${Math.abs(d.count)}条评论中低分占比高`;
+      else if (dev > 0.3) reason = `该日评分偏高，${d.count}条评论中高分占比高`;
+      parts.push(`${d.date} ${dir}${Math.abs(dev)}★（${d.count}条${reason ? '，' + reason : ''}）`);
     }
-    summaryHtml += `</p>`;
+    report += `：${parts.join('；')}`;
+    return report;
   }
 
-  // Paragraph 3: Platform comparison
-  const gpAvgAll = summaries.filter(s => s.gpAvg > 0).reduce((s, a) => s + a.gpAvg, 0);
-  const asAvgAll = summaries.filter(s => s.asAvg > 0).reduce((s, a) => s + a.asAvg, 0);
-  const gpAppCount = summaries.filter(s => s.gpAvg > 0).length;
-  const asAppCount = summaries.filter(s => s.asAvg > 0).length;
-  if (gpAppCount > 0 && asAppCount > 0) {
-    const gpGrand = +(gpAvgAll / gpAppCount).toFixed(2);
-    const asGrand = +(asAvgAll / asAppCount).toFixed(2);
-    summaryHtml += `<p>📱 <b>双平台对比：</b>Google Play 周均 <span class="highlight-stat">${gpGrand}★</span>，App Store 周均 <span class="highlight-stat">${asGrand}★</span>`;
-    if (asGrand > gpGrand) summaryHtml += `，App Store 评分整体 <span class="highlight-green">高于</span> Google Play。`;
-    else summaryHtml += `，Google Play 评分整体 <span class="highlight-green">高于</span> App Store。`;
-    summaryHtml += `</p>`;
+  // -- Google Play 整体 --
+  const gpApps = summaries.filter(s => s.gpAvg > 0);
+  const gpGrandAvg = gpApps.length > 0 ? +(gpApps.reduce((s, a) => s + a.gpAvg, 0) / gpApps.length).toFixed(2) : 0;
+  const gpHasAnomaly = [];
+
+  summaryHtml += `<p><b>🔹 Google Play</b> 周均 <span class="highlight-stat">${gpGrandAvg}★</span>（${totalGP}条评论）。`;
+
+  for (const s of gpApps) {
+    const report = dailyAnomalyReport(s.gpDaily, s.name, 'GP');
+    if (report) {
+      gpHasAnomaly.push(report);
+    }
+  }
+  if (gpHasAnomaly.length > 0) {
+    summaryHtml += `以下APP存在日均波动：</p><p style="margin-left:16px;">${gpHasAnomaly.map(r => r + '。').join('<br>')}</p>`;
+  } else {
+    summaryHtml += `各APP本周评分<span class="highlight-green">平稳波动</span>，无明显异常。</p>`;
   }
 
-  // Paragraph 4: Low score alert
+  // -- App Store 整体 --
+  const asApps = summaries.filter(s => s.asAvg > 0);
+  const asGrandAvg = asApps.length > 0 ? +(asApps.reduce((s, a) => s + a.asAvg, 0) / asApps.length).toFixed(2) : 0;
+  const asHasAnomaly = [];
+
+  summaryHtml += `<p><b>🔹 App Store</b> 周均 <span class="highlight-stat">${asGrandAvg}★</span>（${totalAS}条评论）。`;
+
+  for (const s of asApps) {
+    const report = dailyAnomalyReport(s.asDaily, s.name, 'AS');
+    if (report) {
+      asHasAnomaly.push(report);
+    }
+  }
+  if (asHasAnomaly.length > 0) {
+    summaryHtml += `以下APP存在日均波动：</p><p style="margin-left:16px;">${asHasAnomaly.map(r => r + '。').join('<br>')}</p>`;
+  } else {
+    summaryHtml += `各APP本周评分<span class="highlight-green">平稳波动</span>，无明显异常。</p>`;
+  }
+
+  if (asGrandAvg > gpGrandAvg) {
+    summaryHtml += `<p style="margin-top:4px;">App Store 整体评分 <span class="highlight-green">高于</span> Google Play（+${(asGrandAvg - gpGrandAvg).toFixed(2)}★）。用户在不同平台的评价倾向存在差异。</p>`;
+  } else if (gpGrandAvg > asGrandAvg) {
+    summaryHtml += `<p style="margin-top:4px;">Google Play 整体评分 <span class="highlight-green">高于</span> App Store（+${(gpGrandAvg - asGrandAvg).toFixed(2)}★）。</p>`;
+  }
+
+  // ===== Paragraph 2: 各平台问题聚焦 =====
+  summaryHtml += `<p style="font-size:16px;font-weight:700;margin:20px 0 10px;">🔍 各平台问题聚焦</p>`;
+
+  // Build "其他问题" expanded note for an app
+  function otherExpand(appSummary) {
+    const ob = appSummary.otherBreakdown;
+    if (!ob || ob.total === 0) return '';
+    let html = `<span class="highlight-warn">其中「⚠️ 其他问题」（${ob.total}条低分未归类评论）具体为：</span>`;
+    const items = ob.breakdown.slice(0, 3);
+    html += '<ol style="margin:4px 0 0 16px;font-size:13px;">';
+    for (const [label, cnt] of items) {
+      const pct = Math.round(cnt / ob.total * 100);
+      html += `<li>${label} — ${cnt}条（${pct}%）</li>`;
+    }
+    html += '</ol>';
+    return html;
+  }
+
+  for (const s of summaries) {
+    const totalCnt = s.gpWeekCount + s.asWeekCount;
+    if (totalCnt === 0) continue;
+
+    const tagLines = s.topTags.map(([label, cnt]) => {
+      const isOther = label === '⚠️ 其他问题';
+      const pct = Math.round(cnt / s.totalWeekReviews * 100);
+      return `<span class="${isOther ? 'highlight-warn' : 'tag-chip-inline'}">${label}</span>（${cnt}条/${pct}%）`;
+    });
+
+    summaryHtml += `<p style="margin-bottom:6px;">`;
+    summaryHtml += `<b><span class="highlight-stat">${s.name}</span></b> `;
+    summaryHtml += `GP <span class="${s.gpAvg <= 2 ? 'highlight-red' : s.gpAvg <= 3.5 ? 'highlight-orange' : 'highlight-green'}">${s.gpAvg.toFixed(2)}★</span>`;
+    if (s.gpRatingDelta !== 0) summaryHtml += `（环比 ${s.gpRatingDelta > 0 ? '↑' : '↓'}${Math.abs(s.gpRatingDelta).toFixed(1)}）`;
+    summaryHtml += '，';
+    if (s.asAvg > 0) {
+      summaryHtml += `AS <span class="${s.asAvg <= 2 ? 'highlight-red' : s.asAvg <= 3.5 ? 'highlight-orange' : 'highlight-green'}">${s.asAvg.toFixed(2)}★</span>`;
+      if (s.asRatingDelta !== 0) summaryHtml += `（环比 ${s.asRatingDelta > 0 ? '↑' : '↓'}${Math.abs(s.asRatingDelta).toFixed(1)}）`;
+    }
+    summaryHtml += `，周评论 ${totalCnt} 条。`;
+    summaryHtml += `反馈标签：${tagLines.join('、')}。`;
+    summaryHtml += `</p>`;
+
+    // If "其他问题" exists and has breakdown, expand it
+    const otherExp = otherExpand(s);
+    if (otherExp) {
+      summaryHtml += `<p style="margin-left:16px;margin-top:2px;margin-bottom:10px;">${otherExp}</p>`;
+    }
+  }
+
+  // ===== Paragraph 3: 低分预警 =====
   if (topLow.length > 0) {
-    summaryHtml += `<p>⚠️ <b>低分预警：</b>`;
+    summaryHtml += `<p style="font-size:16px;font-weight:700;margin:20px 0 10px;">⚠️ 低分预警</p>`;
+    summaryHtml += `<p>`;
     summaryHtml += topLow.map(c => {
       const tagNote = c._tags && c._tags.length > 0 ? `（涉及 ${cnTagNote(c.text, c._tags)}）` : '';
       return `<span class="highlight-stat">${c.app}</span> 出现 <span class="highlight-red">${c.rating}★</span> 差评${tagNote}`;
