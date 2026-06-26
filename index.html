@@ -198,23 +198,35 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 /* CN note on highlights */
 .hl-cn-note { font-size: 0.7em; color: var(--text-dim); margin-top: 4px; padding: 3px 6px; background: rgba(255,255,255,0.02); border-radius: 4px; line-height: 1.35; }
 
-/* Platform focus tabs */
-.platform-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-.pt-tab {
+/* Two-level focus selector: store → app */
+.focus-store-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.fstore-tab {
   padding: 5px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.03); color: var(--text-dim); font-size: 0.8em;
   cursor: pointer; transition: all 0.2s;
 }
-.pt-tab:hover { border-color: var(--purple); color: #fff; }
-.pt-tab.active { background: var(--purple); color: #fff; border-color: var(--purple); }
+.fstore-tab:hover { border-color: var(--purple); color: #fff; }
+.fstore-tab.active { background: var(--purple); color: #fff; border-color: var(--purple); }
 
-.platform-focus-item {
-  padding: 8px 10px; margin-bottom: 6px; border-radius: 6px;
-  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
-  font-size: 0.85em; line-height: 1.6;
+.focus-app-tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.fapp-tab {
+  padding: 4px 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02); color: var(--text-dim); font-size: 0.75em;
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 4px;
 }
-.platform-focus-item:last-child { margin-bottom: 0; }
-.platform-focus-content { max-height: 500px; overflow-y: auto; }
+.fapp-tab:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
+.fapp-tab.active { background: rgba(168,130,255,0.15); color: #fff; border-color: rgba(168,130,255,0.4); }
+.fapp-tab.fapp-warn { border-left: 2px solid var(--red); }
+.fapp-tab.fapp-warn.active { border-left-color: var(--red); }
+.fapp-avg { font-size: 0.85em; opacity: 0.7; }
+
+.focus-detail-card {
+  padding: 10px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.84em; line-height: 1.7;
+}
+.focus-detail-header { display: flex; align-items: center; gap: 6px; }
+.focus-detail-icon { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; }
 </style>
 </head>
 <body>
@@ -879,58 +891,79 @@ function renderAISummary() {
     summaryHtml += `<p style="margin-top:2px;">Google Play 整体评分 <span class="highlight-green">高于</span> App Store（+${(gpGrandAvg - asGrandAvg).toFixed(2)}★）。</p>`;
   }
 
-  // ===== Paragraph 2: 各平台问题聚焦（Tab切换样式）=====
+  // ===== Paragraph 2: 各平台问题聚焦（两级选择器：先选商店 → 再选APP）=====
   summaryHtml += `<p style="font-size:16px;font-weight:700;margin:20px 0 10px;">🔍 各平台问题聚焦</p>`;
-  summaryHtml += `<div class="platform-tabs" id="platformTabs" style="display:flex;gap:8px;margin-bottom:12px;">
-    <button class="pt-tab active" data-platform="gp" onclick="switchPlatformTab('gp')">Google Play</button>
-    <button class="pt-tab" data-platform="as" onclick="switchPlatformTab('as')">App Store</button>
-  </div>`;
 
-  // Build "其他问题" expanded note
-  function otherExpandBlock(appSummary) {
-    const ob = appSummary.otherBreakdown;
-    if (!ob || ob.total === 0) return '';
-    let html = `<div style="margin-top:4px;font-size:12px;color:var(--orange);">⚠️ 「其他问题」共 ${ob.total} 条，细分：`;
-    const items = ob.breakdown.slice(0, 3);
-    html += items.map(([label, cnt], i) => `${i + 1}) ${label} ${cnt}条（${Math.round(cnt / ob.total * 100)}%）`).join('；');
-    html += '</div>';
-    return html;
+  // Pre-compute focus data: { gp: [{name, icon, avg, delta, count, tags, otherBreakdown}], as: [...] }
+  function buildFocusEntry(s, platform) {
+    const avgVal = platform === 'gp' ? s.gpAvg : s.asAvg;
+    const deltaVal = platform === 'gp' ? s.gpRatingDelta : s.asRatingDelta;
+    const cntVal = platform === 'gp' ? s.gpWeekCount : s.asWeekCount;
+    return {
+      name: s.name, icon: s.icon,
+      avg: avgVal, delta: deltaVal, count: cntVal,
+      topTags: s.topTags,
+      totalWeekReviews: s.totalWeekReviews,
+      otherBreakdown: s.otherBreakdown,
+    };
   }
 
-  // Render per-app cards for a given platform
-  function renderPlatformFocus(platform) {
-    const keep = summaries.filter(s => platform === 'gp' ? s.gpWeekCount > 0 : s.asWeekCount > 0);
-    if (keep.length === 0) return '<p style="color:var(--text-dim);">暂无数据</p>';
+  const focusData = {
+    gp: summaries.filter(s => s.gpWeekCount > 0).map(s => buildFocusEntry(s, 'gp')),
+    as: summaries.filter(s => s.asWeekCount > 0).map(s => buildFocusEntry(s, 'as')),
+  };
 
-    return keep.map(s => {
-      const avgVal = platform === 'gp' ? s.gpAvg : s.asAvg;
-      const deltaVal = platform === 'gp' ? s.gpRatingDelta : s.asRatingDelta;
-      const cntVal = platform === 'gp' ? s.gpWeekCount : s.asWeekCount;
-      const color = avgVal <= 2 ? 'highlight-red' : avgVal <= 3.5 ? 'highlight-orange' : 'highlight-green';
-      const deltaStr = deltaVal !== 0 ? `（${deltaVal > 0 ? '↑' : '↓'}${Math.abs(deltaVal).toFixed(1)}）` : '';
+  // Store as global for JS switcher
+  window._focusData = focusData;
 
-      const tagLines = s.topTags.map(([label, cnt]) => {
-        const isOther = label === '⚠️ 其他问题';
-        const pct = Math.round(cnt / Math.max(s.totalWeekReviews, 1) * 100);
-        return `<span class="${isOther ? 'highlight-warn' : 'tag-chip-inline'}">${label} ${cnt}条/${pct}%</span>`;
-      });
-
-      const otherBlock = otherExpandBlock(s);
-
-      return `<div class="platform-focus-item">
-        <b><span class="highlight-stat">${s.name}</span></b>
-        <span class="${color}">${avgVal.toFixed(2)}★</span>${deltaStr}
-        · ${cntVal}条评论
-        <div style="margin-top:3px;">${tagLines.join(' ')}</div>
-        ${otherBlock}
-      </div>`;
+  // App selector tabs HTML
+  function appTabsHtml(store, selectedIdx) {
+    const apps = focusData[store];
+    if (apps.length === 0) return '<span style="color:var(--text-dim);font-size:0.8em;">暂无数据</span>';
+    return apps.map((a, i) => {
+      const sel = i === selectedIdx ? ' active' : '';
+      const cls = a.avg <= 2 ? 'fapp-warn' : '';
+      return `<button class="fapp-tab${sel}${cls ? ' ' + cls : ''}" onclick="switchFocusApp('${store}',${i})">${a.name}<span class="fapp-avg">${a.avg.toFixed(1)}★</span></button>`;
     }).join('');
   }
 
-  // Init: show GP by default
-  summaryHtml += `<div id="platformFocusContent" class="platform-focus-content">`;
-  summaryHtml += renderPlatformFocus('gp');
-  summaryHtml += `</div>`;
+  // Single app detail card
+  function focusCardHtml(entry) {
+    const color = entry.avg <= 2 ? 'highlight-red' : entry.avg <= 3.5 ? 'highlight-orange' : 'highlight-green';
+    const deltaStr = entry.delta !== 0 ? `（${entry.delta > 0 ? '↑' : '↓'}${Math.abs(entry.delta).toFixed(1)}）` : '';
+
+    const tagLines = entry.topTags.map(([label, cnt]) => {
+      const isOther = label === '⚠️ 其他问题';
+      const pct = Math.round(cnt / Math.max(entry.totalWeekReviews, 1) * 100);
+      return `<span class="${isOther ? 'highlight-warn' : 'tag-chip-inline'}">${label} ${cnt}条/${pct}%</span>`;
+    });
+
+    let otherBlock = '';
+    const ob = entry.otherBreakdown;
+    if (ob && ob.total > 0) {
+      otherBlock = `<div style="margin-top:6px;font-size:12px;color:var(--orange);line-height:1.6;">⚠️ 「其他问题」共 ${ob.total} 条，细分：`;
+      otherBlock += ob.breakdown.slice(0, 3).map(([label, cnt], i) => `${i + 1}) ${label} ${cnt}条（${Math.round(cnt / ob.total * 100)}%）`).join('；');
+      otherBlock += '</div>';
+    }
+
+    return `<div class="focus-detail-card">
+      <div class="focus-detail-header">
+        ${entry.icon ? `<img class="focus-detail-icon" src="${entry.icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
+        <b><span class="highlight-stat">${entry.name}</span></b>
+        <span class="${color}" style="font-size:1.1em;font-weight:700;">${entry.avg.toFixed(2)}★</span>${deltaStr}
+        <span style="font-size:0.8em;color:var(--text-dim);">· ${entry.count}条评论</span>
+      </div>
+      <div style="margin-top:6px;">${tagLines.join(' ')}</div>
+      ${otherBlock}
+    </div>`;
+  }
+
+  summaryHtml += `<div class="focus-store-tabs" id="focusStoreTabs">
+    <button class="fstore-tab active" data-store="gp" onclick="switchFocusStore('gp')">Google Play</button>
+    <button class="fstore-tab" data-store="as" onclick="switchFocusStore('as')">App Store</button>
+  </div>
+  <div class="focus-app-tabs" id="focusAppTabs">${appTabsHtml('gp', 0)}</div>
+  <div id="focusDetailContent">${focusData.gp.length > 0 ? focusCardHtml(focusData.gp[0]) : '<p style="color:var(--text-dim);">暂无数据</p>'}</div>`;
 
   // ===== Paragraph 3: 低分预警 =====
   if (topLow.length > 0) {
@@ -1173,45 +1206,82 @@ function renderTrendChart() {
   });
 }
 
-// Platform focus tab switcher
-let currentPlatformTab = 'gp';
-function switchPlatformTab(platform) {
-  currentPlatformTab = platform;
-  document.querySelectorAll('.pt-tab').forEach(b => b.classList.toggle('active', b.dataset.platform === platform));
+// Two-level focus selector: store → app
+let currentFocusStore = 'gp';
+let currentFocusIdx = 0;
 
-  const { summaries } = computeAISummary();
-  const keep = summaries.filter(s => platform === 'gp' ? s.gpWeekCount > 0 : s.asWeekCount > 0);
+function switchFocusStore(store) {
+  currentFocusStore = store;
+  currentFocusIdx = 0;
 
-  // Re-invoke the inline render helpers
-  function otherExpandBlock(appSummary) {
-    const ob = appSummary.otherBreakdown;
-    if (!ob || ob.total === 0) return '';
-    let html = '<div style="margin-top:4px;font-size:12px;color:var(--orange);">⚠️ 「其他问题」共 ' + ob.total + ' 条，细分：';
-    const items = ob.breakdown.slice(0, 3);
-    html += items.map(([label, cnt], i) => (i + 1) + ') ' + label + ' ' + cnt + '条（' + Math.round(cnt / ob.total * 100) + '%）').join('；');
-    html += '</div>';
-    return html;
+  // Update store tabs
+  document.querySelectorAll('.fstore-tab').forEach(b => b.classList.toggle('active', b.dataset.store === store));
+
+  // Rebuild app tabs for this store
+  const data = window._focusData;
+  const apps = data ? (data[store] || []) : [];
+  const appTabsEl = document.getElementById('focusAppTabs');
+  if (apps.length === 0) {
+    appTabsEl.innerHTML = '<span style="color:var(--text-dim);font-size:0.8em;">暂无数据</span>';
+    document.getElementById('focusDetailContent').innerHTML = '<p style="color:var(--text-dim);">暂无数据</p>';
+    return;
   }
 
-  const html = keep.map(s => {
-    const avgVal = platform === 'gp' ? s.gpAvg : s.asAvg;
-    const deltaVal = platform === 'gp' ? s.gpRatingDelta : s.asRatingDelta;
-    const cntVal = platform === 'gp' ? s.gpWeekCount : s.asWeekCount;
-    const color = avgVal <= 2 ? 'highlight-red' : avgVal <= 3.5 ? 'highlight-orange' : 'highlight-green';
-    const deltaStr = deltaVal !== 0 ? '（' + (deltaVal > 0 ? '↑' : '↓') + Math.abs(deltaVal).toFixed(1) + '）' : '';
-
-    const tagLines = s.topTags.map(([label, cnt]) => {
-      const isOther = label === '⚠️ 其他问题';
-      const pct = Math.round(cnt / Math.max(s.totalWeekReviews, 1) * 100);
-      return '<span class="' + (isOther ? 'highlight-warn' : 'tag-chip-inline') + '">' + label + ' ' + cnt + '条/' + pct + '%</span>';
-    });
-
-    const otherBlock = otherExpandBlock(s);
-
-    return '<div class="platform-focus-item"><b><span class="highlight-stat">' + s.name + '</span></b> <span class="' + color + '">' + avgVal.toFixed(2) + '★</span>' + deltaStr + ' · ' + cntVal + '条评论<div style="margin-top:3px;">' + tagLines.join(' ') + '</div>' + otherBlock + '</div>';
+  appTabsEl.innerHTML = apps.map((a, i) => {
+    const sel = i === 0 ? ' active' : '';
+    const cls = a.avg <= 2 ? ' fapp-warn' : '';
+    return '<button class="fapp-tab' + sel + cls + '" onclick="switchFocusApp(\\'' + store + '\\',' + i + ')">' + a.name + '<span class="fapp-avg">' + a.avg.toFixed(1) + '★</span></button>';
   }).join('');
 
-  document.getElementById('platformFocusContent').innerHTML = html || '<p style="color:var(--text-dim);">暂无数据</p>';
+  // Show first app
+  renderFocusDetail(apps[0]);
+}
+
+function switchFocusApp(store, idx) {
+  currentFocusStore = store;
+  currentFocusIdx = idx;
+
+  // Update app tabs active state
+  document.querySelectorAll('.fapp-tab').forEach((b, i) => b.classList.toggle('active', i === idx));
+
+  // Ensure store tab is active
+  document.querySelectorAll('.fstore-tab').forEach(b => b.classList.toggle('active', b.dataset.store === store));
+
+  const apps = (window._focusData || {})[store] || [];
+  if (apps[idx]) renderFocusDetail(apps[idx]);
+}
+
+function renderFocusDetail(entry) {
+  const color = entry.avg <= 2 ? 'highlight-red' : entry.avg <= 3.5 ? 'highlight-orange' : 'highlight-green';
+  const deltaStr = entry.delta !== 0 ? '（' + (entry.delta > 0 ? '↑' : '↓') + Math.abs(entry.delta).toFixed(1) + '）' : '';
+
+  const tagLines = entry.topTags.map(function(t) {
+    var label = t[0], cnt = t[1];
+    var isOther = label === '⚠️ 其他问题';
+    var pct = Math.round(cnt / Math.max(entry.totalWeekReviews, 1) * 100);
+    return '<span class="' + (isOther ? 'highlight-warn' : 'tag-chip-inline') + '">' + label + ' ' + cnt + '条/' + pct + '%</span>';
+  });
+
+  var otherBlock = '';
+  var ob = entry.otherBreakdown;
+  if (ob && ob.total > 0) {
+    otherBlock = '<div style="margin-top:6px;font-size:12px;color:var(--orange);line-height:1.6;">⚠️ 「其他问题」共 ' + ob.total + ' 条，细分：';
+    var items = ob.breakdown.slice(0, 3);
+    for (var i = 0; i < items.length; i++) {
+      otherBlock += (i + 1) + ') ' + items[i][0] + ' ' + items[i][1] + '条（' + Math.round(items[i][1] / ob.total * 100) + '%）';
+      if (i < items.length - 1) otherBlock += '；';
+    }
+    otherBlock += '</div>';
+  }
+
+  var html = '<div class="focus-detail-card"><div class="focus-detail-header">';
+  if (entry.icon) html += '<img class="focus-detail-icon" src="' + entry.icon + '" onerror="this.style.display=\\'none\\'" loading="lazy">';
+  html += '<b><span class="highlight-stat">' + entry.name + '</span></b> ';
+  html += '<span class="' + color + '" style="font-size:1.1em;font-weight:700;">' + entry.avg.toFixed(2) + '★</span>' + deltaStr;
+  html += '<span style="font-size:0.8em;color:var(--text-dim);"> · ' + entry.count + '条评论</span>';
+  html += '</div><div style="margin-top:6px;">' + tagLines.join(' ') + '</div>' + otherBlock + '</div>';
+
+  document.getElementById('focusDetailContent').innerHTML = html;
 }
 
 function switchTrendStore(store) {
