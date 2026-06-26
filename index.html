@@ -298,7 +298,8 @@ function classifyReview(text, rating) {
 
 // ============ State ============
 let fullData = null;      // raw data.json (stats + icons)
-let reviewsData = {};     // reviews.json (per_date_reviews for all apps)
+let reviewsData = {};     // reviews.json (GP per_date_reviews)
+let asReviewsData = {};   // appstore_reviews.json (AS per_date_reviews)
 let appData = [];         // current date's app data
 let allDates = [];        // all available dates (desc)
 let currentDate = '';
@@ -380,14 +381,34 @@ function buildAppDataForDate(date) {
   });
 }
 
-// ============ Build ALL reviews for current app across all dates ============
+// ============ Build ALL reviews for current app across all dates (both stores) ============
 function getAllReviewsForApp(appName) {
   const rd = reviewsData[appName] || {};
-  const perDate = rd.per_date_reviews || {};
+  const asRd = asReviewsData[appName] || {};
+  const gpPerDate = rd.per_date_reviews || {};
+  const asPerDate = asRd.per_date_reviews || {};
   const legacy = rd.target_reviews || [];
   const allReviews = [];
   const seen = new Set();
-  for (const [date, reviews] of Object.entries(perDate)) {
+
+  // Add GP reviews
+  for (const [date, reviews] of Object.entries(gpPerDate)) {
+    for (const r of reviews) {
+      if (!seen.has(r.review_id)) {
+        seen.add(r.review_id);
+        allReviews.push({ ...r, review_date: r.review_date || date, store: r.store || 'googleplay' });
+      }
+    }
+  }
+  // Add GP legacy reviews
+  for (const r of legacy) {
+    if (!seen.has(r.review_id)) {
+      seen.add(r.review_id);
+      allReviews.push({ ...r, store: 'googleplay' });
+    }
+  }
+  // Add AS reviews
+  for (const [date, reviews] of Object.entries(asPerDate)) {
     for (const r of reviews) {
       if (!seen.has(r.review_id)) {
         seen.add(r.review_id);
@@ -395,10 +416,41 @@ function getAllReviewsForApp(appName) {
       }
     }
   }
-  for (const r of legacy) {
-    if (!seen.has(r.review_id)) {
-      seen.add(r.review_id);
-      allReviews.push(r);
+
+  // Filter by current store
+  const filtered = allReviews.filter(r => r.store === currentStore);
+
+  filtered.sort((a, b) => {
+    const da = a.review_date || '', db = b.review_date || '';
+    if (da !== db) return da > db ? -1 : 1;
+    return (b.review_id || '').localeCompare(a.review_id || '');
+  });
+  return filtered;
+}
+
+// Get ALL reviews regardless of store (for AI summary, tag chart, etc.)
+function getAllReviewsAllStores(appName) {
+  const rd = reviewsData[appName] || {};
+  const asRd = asReviewsData[appName] || {};
+  const gpPerDate = rd.per_date_reviews || {};
+  const asPerDate = asRd.per_date_reviews || {};
+  const allReviews = [];
+  const seen = new Set();
+
+  for (const [date, reviews] of Object.entries(gpPerDate)) {
+    for (const r of reviews) {
+      if (!seen.has(r.review_id)) {
+        seen.add(r.review_id);
+        allReviews.push({ ...r, review_date: r.review_date || date, store: r.store || 'googleplay' });
+      }
+    }
+  }
+  for (const [date, reviews] of Object.entries(asPerDate)) {
+    for (const r of reviews) {
+      if (!seen.has(r.review_id)) {
+        seen.add(r.review_id);
+        allReviews.push({ ...r, review_date: r.review_date || date });
+      }
     }
   }
   allReviews.sort((a, b) => {
@@ -486,7 +538,7 @@ function computeAISummary() {
     const ratingDelta = yesAvg > 0 ? (todayAvg - yesAvg).toFixed(2) : 0;
 
     // Tag distribution from today's reviews
-    const allReviews = getAllReviewsForApp(app.name);
+    const allReviews = getAllReviewsAllStores(app.name);
     const todayReviews = allReviews.filter(r => r.review_date === today);
     todayReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
     const tagCounts = {};
@@ -724,12 +776,10 @@ function renderTrendChart() {
 function renderTagAppSelector() {
   const container = document.getElementById('tagAppSelector');
   if (!container) return;
-  const apps = (fullData.apps || []).filter(a => {
-    const rd = reviewsData[a.name] || {};
-    const perDate = rd.per_date_reviews || {};
-    const legacy = rd.target_reviews || [];
-    return Object.values(perDate).some(arr => arr.length > 0) || legacy.length > 0;
-  });
+    const apps = (fullData.apps || []).filter(a => {
+      const allReviews = getAllReviewsAllStores(a.name);
+      return allReviews.length > 0;
+    });
   if (!tagChartApp && apps.length > 0) tagChartApp = apps[0].name;
 
   container.innerHTML = apps.map(a => {
@@ -743,7 +793,7 @@ function renderTagAppSelector() {
 
 function switchTagApp(appName) {
   tagChartApp = appName;
-  const allReviews = getAllReviewsForApp(appName);
+  const allReviews = getAllReviewsAllStores(appName);
   allReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
   renderTagAppSelector();
   renderTagChart(allReviews, appName);
@@ -820,15 +870,16 @@ function setReviewFilter(type, value) {
 // ============ App Tabs ============
 function renderAppTabs() {
   const tabs = document.getElementById('appTabs');
-  // For Google Play: filter apps with GP reviews; for App Store: show all apps (count=0 for now)
   const allApps = (fullData.apps || []).filter(a => {
+    const rd = reviewsData[a.name] || {};
+    const asRd = asReviewsData[a.name] || {};
+    const gpPerDate = rd.per_date_reviews || {};
+    const asPerDate = asRd.per_date_reviews || {};
+    const gpLegacy = rd.target_reviews || [];
     if (currentStore === 'googleplay') {
-      const rd = reviewsData[a.name] || {};
-      const perDate = rd.per_date_reviews || {};
-      const legacy = rd.target_reviews || [];
-      return Object.values(perDate).some(arr => arr.length > 0) || legacy.length > 0;
+      return Object.values(gpPerDate).some(arr => arr.length > 0) || gpLegacy.length > 0;
     }
-    return true; // App Store: show all
+    return Object.values(asPerDate).some(arr => arr.length > 0);
   });
 
   tabs.innerHTML = allApps.map((a, i) => {
@@ -840,18 +891,19 @@ function renderAppTabs() {
       const legacy = rd.target_reviews || [];
       total = Object.values(perDate).reduce((s, arr) => s + arr.length, 0) +
               legacy.filter(r => !Object.values(perDate).flat().some(pr => pr.review_id === r.review_id)).length;
+    } else {
+      const asRd = asReviewsData[a.name] || {};
+      const asPerDate = asRd.per_date_reviews || {};
+      total = Object.values(asPerDate).reduce((s, arr) => s + arr.length, 0);
     }
     return `<span class="app-tab ${(currentApp === a.name || (i===0 && !currentApp)) ? 'active' : ''}" onclick="showReviews('${a.name}')">
       ${icon ? `<img src="${icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
-      ${a.name} ${currentStore === 'googleplay' ? `(${total})` : ''}
+      ${a.name} (${total})
     </span>`;
   }).join('');
 
-  // Only auto-select first app if we're on Google Play
-  if (currentStore === 'googleplay' && allApps.length > 0 && !currentApp) {
-    currentApp = allApps[0].name;
-    showReviews(currentApp);
-  } else if (allApps.length > 0 && (!currentApp || !allApps.some(a => a.name === currentApp))) {
+  // Auto-select first app
+  if (allApps.length > 0 && (!currentApp || !allApps.some(a => a.name === currentApp))) {
     currentApp = allApps[0].name;
     showReviews(currentApp);
   } else if (currentApp) {
@@ -862,11 +914,13 @@ function renderAppTabs() {
 // ============ Store Switch ============
 function switchStore(store) {
   currentStore = store;
-  // Update store switch buttons
   document.querySelectorAll('.store-switch-btn').forEach(b => {
     b.classList.toggle('active', b.classList.contains(store === 'googleplay' ? 'gp' : 'as'));
   });
-  // Update section title
+  // Update badge - remove "待接入" since we have data
+  const asBadge = document.querySelector('.store-switch-btn.as .badge');
+  if (asBadge) asBadge.style.display = 'none';
+
   const dot = document.getElementById('reviewDot');
   const title = document.getElementById('reviewTitle');
   if (store === 'googleplay') {
@@ -876,8 +930,10 @@ function switchStore(store) {
     dot.style.background = 'var(--blue)';
     title.textContent = 'App Store 评论详情';
   }
-  // Re-render app tabs for the selected store
   currentApp = null;
+  activeReviewDate = 'all';
+  activeRating = 'all';
+  activeTag = 'all';
   renderAppTabs();
 }
 
@@ -891,17 +947,48 @@ function showReviews(appName) {
   const list = document.getElementById('reviewItems');
   const filterBars = document.getElementById('reviewList');
 
-  // App Store: show empty state
+  // App Store: show reviews (now with real data)
   if (currentStore === 'appstore') {
-    document.getElementById('reviewMetaBar').innerHTML = `共 0 条 · App Store 评论数据待接入`;
-    document.getElementById('dateFilterBar').style.display = 'none';
-    document.getElementById('ratingFilterBar').style.display = 'none';
-    document.getElementById('tagFilterBar').style.display = 'none';
-    list.innerHTML = `<div class="empty-state">
-      <div class="icon">📱</div>
-      <div style="margin-bottom:6px;">暂无 App Store 评论数据</div>
-      <div style="font-size:0.8em;color:var(--text-dim);">待后续接入后同步，届时可切换查看</div>
-    </div>`;
+    const allReviews = getAllReviewsForApp(appName);
+    allReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
+
+    let reviews = allReviews;
+    if (activeReviewDate !== 'all') reviews = reviews.filter(r => r.review_date === activeReviewDate);
+    if (activeRating !== 'all') reviews = reviews.filter(r => r.rating === parseInt(activeRating));
+    if (activeTag !== 'all') reviews = reviews.filter(r => (r._tags || []).some(t => t.label === activeTag));
+
+    document.getElementById('dateFilterBar').style.display = '';
+    document.getElementById('ratingFilterBar').style.display = '';
+    document.getElementById('tagFilterBar').style.display = '';
+
+    document.getElementById('reviewMetaBar').innerHTML =
+      `共 ${allReviews.length} 条 · 筛选后 ${reviews.length} 条` +
+      `${activeReviewDate !== 'all' ? ' · ' + activeReviewDate : ''}`;
+
+    if (reviews.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">🔍</div>无匹配的 App Store 评论</div>`;
+      return;
+    }
+
+    const showCount = Math.min(reviews.length, 100);
+    list.innerHTML = `
+      <div style="padding:10px 18px;background:rgba(96,165,250,0.05);border-top:1px solid rgba(255,255,255,0.05);font-size:0.82em;color:var(--text-dim);">${appName} · App Store · ${reviews.length} 条评论</div>
+      ${reviews.slice(0, showCount).map(r => `
+      <div class="review-item">
+        <div class="review-rating r${r.rating}">${r.rating}★</div>
+        <div class="review-body">
+          <div class="review-user">${escapeHtml(r.user_name)} · ${r.review_date || ''} · 🍎 App Store</div>
+          <div class="review-text">${escapeHtml(r.text)}</div>
+          ${(r._tags && r._tags.length > 0) ? `<div class="review-tags">${r._tags.map(t => `<span class="review-tag" onclick="setReviewFilter('tag','${escapeHtml(t.label)}')">${t.label}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>`).join('')}
+      ${reviews.length > showCount ? `<div style="padding:12px;text-align:center;color:var(--text-dim);font-size:0.8em;">还有 ${reviews.length - showCount} 条未显示</div>` : ''}
+    `;
+
+    // Update filter bars
+    const tagCounts = {};
+    allReviews.forEach(r => { (r._tags || []).forEach(t => { tagCounts[t.label] = (tagCounts[t.label] || 0) + 1; }); });
+    renderFilterBars(allReviews, tagCounts);
     return;
   }
 
@@ -999,15 +1086,33 @@ async function loadData() {
 
     // Load reviews separately (optional, fails gracefully)
     try {
-      const revResp = await fetch('reviews.json?t=' + Date.now());
+      const [revResp, asRevResp] = await Promise.all([
+        fetch('reviews.json?t=' + Date.now()),
+        fetch('appstore_reviews.json?t=' + Date.now())
+      ]);
       reviewsData = await revResp.json();
-      renderAppTabs(); // re-render tabs with correct review counts
-      renderTagAppSelector(); // init tag chart app selector
-      switchTagApp(tagChartApp); // render initial tag chart
-      renderAISummary(); // AI summary
+      try { asReviewsData = await asRevResp.json(); } catch(e) { asReviewsData = {}; }
+
+      // Merge AS dates into allDates
+      for (const [appName, info] of Object.entries(asReviewsData)) {
+        for (const d of Object.keys(info.per_date_reviews || {})) dateSet.add(d);
+      }
+      allDates = [...dateSet].sort().reverse();
+      currentDate = allDates[0];
+      appData = buildAppDataForDate(currentDate);
+      renderDateSelector();
+
+      renderAppTabs();
+      renderTagAppSelector();
+      switchTagApp(tagChartApp);
+      renderAISummary();
+
+      // Update subtitle to reflect both stores are live
+      document.querySelector('.subtitle').textContent = '美区 App Store + Google Play · 7款 AI 情感陪伴类应用 · 双平台评论已接入';
     } catch (e) {
       console.warn('reviews.json not available (reviews disabled):', e.message);
       reviewsData = {};
+      asReviewsData = {};
     }
   } catch (e) {
     console.error('Failed to load data:', e);
