@@ -1230,7 +1230,7 @@ function switchFocusStore(store) {
   appTabsEl.innerHTML = apps.map((a, i) => {
     const sel = i === 0 ? ' active' : '';
     const cls = a.avg <= 2 ? ' fapp-warn' : '';
-    return '<button class="fapp-tab' + sel + cls + '" onclick="switchFocusApp(\\'' + store + '\\',' + i + ')">' + a.name + '<span class="fapp-avg">' + a.avg.toFixed(1) + '★</span></button>';
+    return `<button class="fapp-tab${sel}${cls}" onclick="switchFocusApp('${store}',${i})">${a.name}<span class="fapp-avg">${a.avg.toFixed(1)}★</span></button>`;
   }).join('');
 
   // Show first app
@@ -1253,33 +1253,39 @@ function switchFocusApp(store, idx) {
 
 function renderFocusDetail(entry) {
   const color = entry.avg <= 2 ? 'highlight-red' : entry.avg <= 3.5 ? 'highlight-orange' : 'highlight-green';
-  const deltaStr = entry.delta !== 0 ? '（' + (entry.delta > 0 ? '↑' : '↓') + Math.abs(entry.delta).toFixed(1) + '）' : '';
+  const delta = entry.delta || 0;
+  const deltaStr = delta !== 0 ? `（${delta > 0 ? '↑' : '↓'}${Math.abs(delta).toFixed(1)}）` : '';
 
-  const tagLines = entry.topTags.map(function(t) {
-    var label = t[0], cnt = t[1];
-    var isOther = label === '⚠️ 其他问题';
-    var pct = Math.round(cnt / Math.max(entry.totalWeekReviews, 1) * 100);
-    return '<span class="' + (isOther ? 'highlight-warn' : 'tag-chip-inline') + '">' + label + ' ' + cnt + '条/' + pct + '%</span>';
+  const tagLines = entry.topTags.map(t => {
+    const [label, cnt] = t;
+    const isOther = label === '⚠️ 其他问题';
+    const pct = Math.round(cnt / Math.max(entry.totalWeekReviews, 1) * 100);
+    return `<span class="${isOther ? 'highlight-warn' : 'tag-chip-inline'}">${label} ${cnt}条/${pct}%</span>`;
   });
 
-  var otherBlock = '';
-  var ob = entry.otherBreakdown;
+  let otherBlock = '';
+  const ob = entry.otherBreakdown;
   if (ob && ob.total > 0) {
-    otherBlock = '<div style="margin-top:6px;font-size:12px;color:var(--orange);line-height:1.6;">⚠️ 「其他问题」共 ' + ob.total + ' 条，细分：';
-    var items = ob.breakdown.slice(0, 3);
-    for (var i = 0; i < items.length; i++) {
-      otherBlock += (i + 1) + ') ' + items[i][0] + ' ' + items[i][1] + '条（' + Math.round(items[i][1] / ob.total * 100) + '%）';
-      if (i < items.length - 1) otherBlock += '；';
-    }
-    otherBlock += '</div>';
+    const items = ob.breakdown.slice(0, 3);
+    otherBlock = `<div style="margin-top:6px;font-size:12px;color:var(--orange);line-height:1.6;">⚠️ 「其他问题」共 ${ob.total} 条，细分：${
+      items.map(([label, cnt], i) => `${i + 1}) ${label} ${cnt}条（${Math.round(cnt / ob.total * 100)}%）`).join('；')
+    }</div>`;
   }
 
-  var html = '<div class="focus-detail-card"><div class="focus-detail-header">';
-  if (entry.icon) html += '<img class="focus-detail-icon" src="' + entry.icon + '" onerror="this.style.display=\\'none\\'" loading="lazy">';
-  html += '<b><span class="highlight-stat">' + entry.name + '</span></b> ';
-  html += '<span class="' + color + '" style="font-size:1.1em;font-weight:700;">' + entry.avg.toFixed(2) + '★</span>' + deltaStr;
-  html += '<span style="font-size:0.8em;color:var(--text-dim);"> · ' + entry.count + '条评论</span>';
-  html += '</div><div style="margin-top:6px;">' + tagLines.join(' ') + '</div>' + otherBlock + '</div>';
+  const iconHtml = entry.icon
+    ? `<img class="focus-detail-icon" src="${entry.icon}" onerror="this.style.display='none'" loading="lazy">`
+    : '';
+
+  const html = `<div class="focus-detail-card">
+    <div class="focus-detail-header">
+      ${iconHtml}
+      <b><span class="highlight-stat">${entry.name}</span></b>
+      <span class="${color}" style="font-size:1.1em;font-weight:700;">${entry.avg.toFixed(2)}★</span>${deltaStr}
+      <span style="font-size:0.8em;color:var(--text-dim);"> · ${entry.count}条评论</span>
+    </div>
+    <div style="margin-top:6px;">${tagLines.join(' ')}</div>
+    ${otherBlock}
+  </div>`;
 
   document.getElementById('focusDetailContent').innerHTML = html;
 }
