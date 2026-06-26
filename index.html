@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI社交APP评分监控 - 美区应用商店</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f1a;
+  --card-bg: rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.08);
+  --text: #e0e0e0;
+  --text-dim: rgba(255,255,255,0.5);
+  --blue: #60a5fa; --green: #34d399; --purple: #a78bfa;
+  --orange: #fb923c; --pink: #f472b6; --yellow: #fbbf24;
+  --red: #f87171;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.header { text-align: center; padding: 36px 20px 20px; border-bottom: 1px solid var(--border); }
+.header h1 { font-size: 2em; background: linear-gradient(90deg, var(--purple), var(--blue), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.header .subtitle { color: var(--text-dim); font-size: 0.9em; margin-top: 6px; }
+
+/* Date Bar */
+.date-bar { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.date-bar label { font-size: 0.85em; color: var(--text-dim); }
+.date-select { padding: 8px 32px 8px 14px; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.25); border-radius: 20px; color: var(--purple); font-size: 0.85em; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a78bfa' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.date-select:hover { border-color: var(--purple); background: rgba(167,139,250,0.12); }
+.date-info { font-size: 0.8em; color: var(--text-dim); }
+
+.container { max-width: 1440px; margin: 0 auto; padding: 20px; }
+
+/* Overview Cards */
+.app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px; margin-bottom: 30px; }
+.app-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; transition: border-color 0.2s; }
+.app-card:hover { border-color: rgba(167,139,250,0.2); }
+.app-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.app-card-icon { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.app-card .app-name { font-size: 1.1em; font-weight: 600; }
+.platform-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 6px; }
+.platform-icon { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.platform-badge-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+.platform-badge { font-size: 0.68em; padding: 2px 7px; border-radius: 4px; color: #fff; white-space: nowrap; }
+.platform-badge.as { background: rgba(96,165,250,0.35); }
+.platform-badge.gp { background: rgba(52,211,153,0.35); }
+.platform-info { flex: 1; min-height: 56px; background: rgba(255,255,255,0.02); border-radius: 8px; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; justify-content: center; }
+.platform-info .rating-line { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.platform-info .rating-big { font-size: 1.5em; font-weight: 700; }
+.platform-info .meta { font-size: 0.78em; color: var(--text-dim); }
+.daily-badge { font-size: 0.72em; padding: 2px 6px; border-radius: 10px; display: inline-block; }
+.daily-badge.up { background: rgba(52,211,153,0.15); color: var(--green); }
+.daily-badge.down { background: rgba(248,113,113,0.15); color: var(--red); }
+.daily-badge.neutral { background: rgba(255,255,255,0.06); color: var(--text-dim); }
+.dist-bar { display: flex; gap: 2px; height: 5px; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.dist-bar .s1 { background: #ef4444; }
+.dist-bar .s2 { background: #f97316; }
+.dist-bar .s3 { background: #eab308; }
+.dist-bar .s4 { background: #84cc16; }
+.dist-bar .s5 { background: #22c55e; }
+
+/* Charts Section */
+.charts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+@media (max-width: 1100px) { .charts-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+/* Trend chart spans full width */
+.chart-card.wide { grid-column: 1 / -1; }
+.chart-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.chart-card h3 { font-size: 0.95em; color: var(--text-dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.chart-wrap { position: relative; height: 300px; }
+.chart-wrap.tall { height: 400px; }
+
+/* Filter bars */
+.filter-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; }
+#tagFilterBar.filter-bar { border-bottom: none; }
+.filter-label { font-size: 0.75em; color: var(--text-dim); flex-shrink: 0; }
+.filter-chip { padding: 4px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; font-size: 0.76em; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 3px; white-space: nowrap; color: var(--text-dim); }
+.filter-chip:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.filter-chip.active { background: rgba(167,139,250,0.15); border-color: var(--purple); color: var(--purple); }
+.filter-chip .chip-count { font-size: 0.75em; opacity: 0.7; }
+.filter-chip.rating-r1.active { background: rgba(239,68,68,0.15); border-color: #ef4444; color: #ef4444; }
+.filter-chip.rating-r2.active { background: rgba(249,115,22,0.15); border-color: #f97316; color: #f97316; }
+.filter-chip.rating-r3.active { background: rgba(234,179,8,0.15); border-color: #eab308; color: #eab308; }
+.filter-chip.rating-r4.active { background: rgba(132,204,22,0.15); border-color: #84cc16; color: #84cc16; }
+.filter-chip.rating-r5.active { background: rgba(34,197,94,0.15); border-color: #22c55e; color: #22c55e; }
+
+/* Detail Section */
+.section-title { font-size: 1.1em; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+.section-title-left { display: flex; align-items: center; gap: 8px; }
+.section-title .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.review-meta-bar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 0.8em; color: var(--text-dim); }
+.review-list { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+.review-item { padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; gap: 12px; align-items: flex-start; transition: background 0.15s; }
+.review-item:hover { background: rgba(255,255,255,0.02); }
+.review-item:last-child { border-bottom: none; }
+.review-rating { min-width: 32px; font-weight: 700; font-size: 1.1em; text-align: center; padding: 4px; border-radius: 6px; flex-shrink: 0; }
+.review-rating.r1 { background: rgba(239,68,68,0.15); color: #ef4444; }
+.review-rating.r2 { background: rgba(249,115,22,0.15); color: #f97316; }
+.review-rating.r3 { background: rgba(234,179,8,0.15); color: #eab308; }
+.review-rating.r4 { background: rgba(132,204,22,0.15); color: #84cc16; }
+.review-rating.r5 { background: rgba(34,197,94,0.15); color: #22c55e; }
+.review-body { flex: 1; min-width: 0; }
+.review-user { font-size: 0.8em; color: var(--text-dim); margin-bottom: 4px; }
+.review-text { font-size: 0.85em; line-height: 1.5; color: rgba(255,255,255,0.75); word-break: break-word; }
+.review-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.review-tag { padding: 2px 8px; background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.2); border-radius: 10px; font-size: 0.7em; color: var(--purple); white-space: nowrap; cursor: pointer; }
+.review-tag:hover { background: rgba(167,139,250,0.2); }
+.review-reply { margin-top: 8px; padding: 8px 12px; background: rgba(96,165,250,0.06); border-radius: 6px; border-left: 2px solid rgba(96,165,250,0.3); }
+.review-reply .reply-label { font-size: 0.7em; color: var(--blue); margin-bottom: 3px; }
+.review-reply .reply-text { font-size: 0.8em; color: rgba(255,255,255,0.6); }
+
+.app-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.app-tab { padding: 8px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: var(--text-dim); cursor: pointer; font-size: 0.85em; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+.app-tab:hover { background: rgba(255,255,255,0.08); }
+.app-tab.active { background: rgba(167,139,250,0.15); border-color: var(--purple); color: var(--purple); }
+.app-tab img { width: 18px; height: 18px; border-radius: 4px; }
+
+.footer { text-align: center; padding: 30px; color: var(--text-dim); font-size: 0.8em; border-top: 1px solid var(--border); }
+.empty-state { padding: 40px; text-align: center; color: var(--text-dim); }
+.empty-state .icon { font-size: 2em; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>AI 社交 APP 评分监控看板</h1>
+  <p class="subtitle">美区 App Store + Google Play · 7款 AI 情感陪伴类应用</p>
+  <div class="date-bar">
+    <label for="dateSelect">📅 选择日期</label>
+    <select class="date-select" id="dateSelect" onchange="onDateChange(this.value)"></select>
+    <span class="date-info" id="dateStats"></span>
+  </div>
+</div>
+
+<div class="container">
+  <!-- APP Summary Cards -->
+  <div class="app-grid" id="appGrid"></div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>📊 整体评分对比</h3>
+      <div class="chart-wrap"><canvas id="overallChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3 id="dailyChartTitle">📈 当日 GP 评分分布</h3>
+      <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3 id="tagChartTitle">🏷️ 评论标签分布</h3>
+      <div class="chart-wrap"><canvas id="tagChart"></canvas></div>
+    </div>
+    <!-- Trend chart: full width -->
+    <div class="chart-card wide">
+      <h3>📉 每日评分趋势 (Google Play · 近期)</h3>
+      <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Review Details -->
+  <div class="section-title">
+    <div class="section-title-left"><span class="dot" style="background:var(--green)"></span> Google Play 评论详情</div>
+    <div class="review-meta-bar" id="reviewMetaBar"></div>
+  </div>
+  <div class="app-tabs" id="appTabs"></div>
+  <div class="review-list" id="reviewList">
+    <div class="filter-bar" id="dateFilterBar">
+      <span class="filter-label">📅 日期：</span>
+    </div>
+    <div class="filter-bar" id="ratingFilterBar">
+      <span class="filter-label">⭐ 评分：</span>
+    </div>
+    <div class="filter-bar" id="tagFilterBar">
+      <span class="filter-label">🏷️ 标签：</span>
+    </div>
+    <div id="reviewItems">
+      <div class="empty-state"><div class="icon">📋</div>点击上方APP标签查看评论</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  数据来源: iTunes Lookup API / Google Play Scraper · 更新时间: <span id="updateTime">-</span> · 仅用于竞品分析
+</div>
+
+<script>
+// ============ Tag Classifier ============
+function kwMatch(text, keyword) {
+  const kwLen = keyword.length;
+  if (kwLen <= 3 && /^[a-z0-9\s]+$/i.test(keyword)) {
+    const re = new RegExp('(^|[^a-zA-Z0-9])' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-zA-Z0-9])', 'i');
+    return re.test(text);
+  }
+  return text.includes(keyword.toLowerCase());
+}
+
+const TAG_RULES = [
+  { id: 'ads', label: '📢 广告抱怨', keywords: ['ads', 'advertising', 'advertisement', 'too many ads', 'full of ads', 'ads everywhere'], weight: 3 },
+  { id: 'pricing', label: '💰 付费订阅', keywords: ['money', 'greedy', 'pay', 'premium', 'subscription', 'c.ai+', 'expensive', 'overpriced', 'price', 'paywall', 'charged', 'paying'], weight: 2 },
+  { id: 'verification', label: '🆔 年龄验证', keywords: ['verification', 'verify', 'government id', 'age verification', 'upload your id', 'not 18', 'under 18'], weight: 3 },
+  { id: 'update', label: '🔄 更新问题', keywords: ['update', 'updates', 'updated', 'new version', 'latest update', 'after this update', 'become worse', 'got worse'], weight: 2 },
+  { id: 'ai_quality', label: '🤖 AI回复质量', keywords: ['response', 'replies', 'memory loss', 'keep forgetting', 'repetitive', 'dumb', 'stupid ai', 'bot forgot'], weight: 1 },
+  { id: 'adult_filter', label: '🎨 内容过滤', keywords: ['nsfw', "can't do 18+", 'censor', 'censored', 'content filter', 'blocked word', "can't say", 'filter'], weight: 2 },
+  { id: 'limit', label: '🚫 功能限制', keywords: ['limit', 'limited', 'restriction', 'restricted', 'swipe limit', 'message limit', 'chat limit', 'text limit', 'reading mode', 'can only read'], weight: 3 },
+  { id: 'positive', label: '❤️ 正面评价', keywords: ['love this', 'love it', 'great app', 'amazing app', 'best app', 'so good', 'really good', 'addicted', 'enjoy', 'wonderful', 'excellent', 'perfect', 'recommend', 'five star', '5 star'], weight: 2 },
+  { id: 'bug', label: '🐛 技术问题', keywords: ['bug', 'glitch', 'crash', 'buggy', 'error', 'broken', 'not working', "doesn't work", 'doesnt work', 'freeze', 'lag', 'loading'], weight: 2 },
+  { id: 'privacy', label: '🔒 隐私顾虑', keywords: ['privacy', 'personal data', 'identity', 'id scan', 'data collection', 'track', 'spy'], weight: 2 },
+  { id: 'decline', label: '📉 产品衰退', keywords: ['used to be', 'miss the old', 'bring back', 'gone downhill', 'went downhill', 'so bad now', 'was better', 'was great', 'declined', 'ruined', 'old version', 'old c.ai'], weight: 2 },
+  { id: 'feature_req', label: '💡 功能建议', keywords: ['please add', 'wish', 'need to add', 'should add', 'would be nice', 'suggest', 'i hope', 'feature request', 'can you add', 'we need'], weight: 1 },
+];
+
+function classifyReview(text, rating) {
+  if (!text) return [];
+  const lower = text.toLowerCase();
+  const tags = [];
+  for (const rule of TAG_RULES) {
+    for (const kw of rule.keywords) {
+      if (kwMatch(lower, kw)) { tags.push({ id: rule.id, label: rule.label, weight: rule.weight }); break; }
+    }
+  }
+  if (rating >= 4 && !tags.some(t => t.id === 'positive')) {
+    const hasNeg = tags.some(t => ['ads','pricing','bug','verification','limit','decline','adult_filter'].includes(t.id));
+    if (!hasNeg) tags.push({ id: 'positive', label: '❤️ 正面评价', weight: 1 });
+  }
+  if (rating <= 2 && tags.length === 0) tags.push({ id: 'negative', label: '👎 负面反馈', weight: 1 });
+  tags.sort((a, b) => b.weight - a.weight);
+  return tags.slice(0, 3);
+}
+
+// ============ State ============
+let fullData = null;      // raw data.json (stats + icons)
+let reviewsData = {};     // reviews.json (per_date_reviews for all apps)
+let appData = [];         // current date's app data
+let allDates = [];        // all available dates (desc)
+let currentDate = '';
+let currentApp = null;
+let activeReviewDate = 'all';
+let activeRating = 'all';
+let activeTag = 'all';
+
+// ============ Helpers ============
+function getRatingColor(r) {
+  if (!r) return 'var(--text-dim)';
+  if (r >= 4.5) return 'var(--green)';
+  if (r >= 4.0) return 'var(--blue)';
+  if (r >= 3.0) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+function renderDistBar(dist) {
+  if (!dist) return '';
+  const total = Object.values(dist).reduce((a,b)=>+a+ +b, 0);
+  if (total === 0) return '';
+  return `<div class="dist-bar">
+    <div class="s1" style="width:${dist[1]/total*100}%"></div>
+    <div class="s2" style="width:${dist[2]/total*100}%"></div>
+    <div class="s3" style="width:${dist[3]/total*100}%"></div>
+    <div class="s4" style="width:${dist[4]/total*100}%"></div>
+    <div class="s5" style="width:${dist[5]/total*100}%"></div>
+  </div>`;
+}
+
+// ============ Build per-date appData from fullData ============
+function buildAppDataForDate(date) {
+  return (fullData.apps || []).map(app => {
+    const base = { name: app.name };
+
+    // App Store: use static info + daily_stats for the selected date
+    const as = app.appstore || {};
+    const asDailyStats = (as.daily_stats || []).find(s => s.date === date);
+    base.appstore = {
+      app_id: as.app_id || as.bundle_id || '?',
+      app_name: as.app_name,
+      overall_rating: as.overall_rating,
+      total_reviews_all: as.total_reviews_all,
+      icon_url: as.icon_url || '',
+      target_date: date,
+      target_review_count: asDailyStats?.count || 0,
+      target_avg_rating: asDailyStats?.avg_rating || 0,
+    };
+
+    // Google Play: use per_date_stats + per_date_reviews
+    const gp = app.googleplay || {};
+    const gpStats = (gp.per_date_stats || {})[date];
+
+    if (gp.app_id) {
+      base.googleplay = {
+        app_id: gp.app_id,
+        app_name: gp.app_name,
+        overall_rating: gp.overall_rating,
+        total_reviews_all: gp.total_reviews_all,
+        icon_url: gp.icon_url || '',
+        target_date: date,
+        target_review_count: gpStats?.count || 0,
+        target_avg_rating: gpStats?.avg_rating || 0,
+        target_rating_distribution: gpStats?.dist || { 1:0,2:0,3:0,4:0,5:0 },
+        per_date_stats: gp.per_date_stats || {},
+      };
+    } else {
+      base.googleplay = null;
+    }
+
+    return base;
+  });
+}
+
+// ============ Build ALL reviews for current app across all dates ============
+function getAllReviewsForApp(appName) {
+  const rd = reviewsData[appName] || {};
+  const perDate = rd.per_date_reviews || {};
+  const legacy = rd.target_reviews || [];
+  const allReviews = [];
+  const seen = new Set();
+  for (const [date, reviews] of Object.entries(perDate)) {
+    for (const r of reviews) {
+      if (!seen.has(r.review_id)) {
+        seen.add(r.review_id);
+        allReviews.push({ ...r, review_date: r.review_date || date });
+      }
+    }
+  }
+  for (const r of legacy) {
+    if (!seen.has(r.review_id)) {
+      seen.add(r.review_id);
+      allReviews.push(r);
+    }
+  }
+  allReviews.sort((a, b) => {
+    const da = a.review_date || '', db = b.review_date || '';
+    if (da !== db) return da > db ? -1 : 1;
+    return (b.review_id || '').localeCompare(a.review_id || '');
+  });
+  return allReviews;
+}
+
+// ============ Date Selector ============
+function renderDateSelector() {
+  const sel = document.getElementById('dateSelect');
+  sel.innerHTML = allDates.map(d =>
+    `<option value="${d}" ${d === currentDate ? 'selected' : ''}>${d}</option>`
+  ).join('');
+  const totalGP = appData.reduce((s, a) => s + (a.googleplay?.target_review_count || 0), 0);
+  document.getElementById('dateStats').textContent = `当日 ${totalGP} 条GP评论`;
+}
+
+// ============ App Cards ============
+function renderAppCards() {
+  const grid = document.getElementById('appGrid');
+  grid.innerHTML = appData.map(app => {
+    const as = app.appstore || {};
+    const gp = app.googleplay || {};
+    const asIcon = as.icon_url || '';
+    const gpIcon = gp.icon_url || '';
+    const cardIcon = asIcon || gpIcon;
+
+    return `
+    <div class="app-card">
+      <div class="app-card-header">
+        ${cardIcon ? `<img class="app-card-icon" src="${cardIcon}" alt="${app.name}" loading="lazy" onerror="this.style.display='none'">` : '<div class="app-card-icon" style="background:rgba(167,139,250,0.1);display:flex;align-items:center;justify-content:center;font-size:1.4em;">🤖</div>'}
+        <span class="app-name">${app.name}</span>
+      </div>
+      ${as.app_id ? `
+      <div class="platform-row">
+        ${asIcon ? `<img class="platform-icon" src="${asIcon}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<div class="platform-icon" style="background:rgba(96,165,250,0.1)"></div>'}
+        <div class="platform-badge-col"><span class="platform-badge as">App Store</span></div>
+        <div class="platform-info">
+          <div class="rating-line">
+            <span class="rating-big" style="color:${getRatingColor(as.overall_rating)}">${as.overall_rating || '-'}⭐</span>
+            <span class="meta">${(as.total_reviews_all||0).toLocaleString()} 总评</span>
+            ${as.target_avg_rating ? `<span class="daily-badge ${as.target_avg_rating >= as.overall_rating ? 'up' : 'down'}">当日均 ${as.target_avg_rating}⭐ (${as.target_review_count}条)</span>` : ''}
+          </div>
+        </div>
+      </div>` : ''}
+      ${gp.app_id ? `
+      <div class="platform-row">
+        ${gpIcon ? `<img class="platform-icon" src="${gpIcon}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<div class="platform-icon" style="background:rgba(52,211,153,0.1)"></div>'}
+        <div class="platform-badge-col"><span class="platform-badge gp">Google Play</span></div>
+        <div class="platform-info">
+          <div class="rating-line">
+            <span class="rating-big" style="color:${getRatingColor(gp.overall_rating)}">${gp.overall_rating || '-'}⭐</span>
+            <span class="meta">${(gp.total_reviews_all||0).toLocaleString()} 总评</span>
+            ${gp.target_avg_rating ? `<span class="daily-badge ${gp.target_avg_rating >= gp.overall_rating ? 'up' : 'down'}">当日均 ${gp.target_avg_rating}⭐ (${gp.target_review_count}条)</span>` : `<span class="daily-badge neutral">当日0评</span>`}
+          </div>
+          ${gp.target_rating_distribution ? renderDistBar(gp.target_rating_distribution) : ''}
+        </div>
+      </div>` : '<div style="font-size:0.8em;color:var(--text-dim);padding:4px 0">⛔ 未上架 Google Play</div>'}
+    </div>`;
+  }).join('');
+}
+
+// ============ Charts ============
+let overallChart, dailyChart, tagChart, trendChart;
+
+function renderOverallChart() {
+  const ctx = document.getElementById('overallChart').getContext('2d');
+  if (overallChart) overallChart.destroy();
+  const labels = appData.map(a => a.name);
+  const asRatings = appData.map(a => a.appstore?.overall_rating || null);
+  const gpRatings = appData.map(a => a.googleplay?.overall_rating || null);
+  overallChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'App Store', data: asRatings, backgroundColor: 'rgba(96,165,250,0.6)', borderColor: '#60a5fa', borderWidth: 1, borderRadius: 4 },
+        { label: 'Google Play', data: gpRatings, backgroundColor: 'rgba(52,211,153,0.6)', borderColor: '#34d399', borderWidth: 1, borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: false, min: 1, max: 5, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+        x: { ticks: { color: 'rgba(255,255,255,0.6)', maxRotation: 45 } }
+      },
+      plugins: { legend: { labels: { color: 'rgba(255,255,255,0.6)' } } }
+    }
+  });
+}
+
+function renderDailyChart() {
+  const ctx = document.getElementById('dailyChart').getContext('2d');
+  if (dailyChart) dailyChart.destroy();
+  document.getElementById('dailyChartTitle').textContent = `📈 ${currentDate} GP 评分分布`;
+  const labels = appData.map(a => a.name);
+  const gpDaily = appData.map(a => a.googleplay?.target_avg_rating || null);
+  const gpCounts = appData.map(a => a.googleplay?.target_review_count || 0);
+  dailyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'GP 当日均分',
+        data: gpDaily,
+        backgroundColor: gpDaily.map(r => r ? (r >= 3.5 ? 'rgba(52,211,153,0.6)' : r >= 2.5 ? 'rgba(251,191,36,0.6)' : 'rgba(248,113,113,0.6)') : 'rgba(255,255,255,0.1)'),
+        borderWidth: 1, borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: false, min: 1, max: 5, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+        x: { ticks: { color: 'rgba(255,255,255,0.6)', maxRotation: 45 } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { afterLabel: (ctx) => `评论数: ${gpCounts[ctx.dataIndex]}` } }
+      }
+    }
+  });
+}
+
+function renderTrendChart() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (trendChart) trendChart.destroy();
+
+  // Collect all dates from all apps' per_date_stats
+  const dateSet = new Set();
+  for (const app of fullData.apps || []) {
+    const stats = app.googleplay?.per_date_stats || {};
+    for (const d of Object.keys(stats)) dateSet.add(d);
+    // Also from appstore daily_stats
+    for (const s of (app.appstore?.daily_stats || [])) dateSet.add(s.date);
+  }
+  const dates = [...dateSet].sort();  // ascending for trend
+
+  // App colors
+  const COLORS = ['#60a5fa','#34d399','#a78bfa','#fb923c','#f472b6','#fbbf24','#f87171'];
+  const datasets = (fullData.apps || []).map((app, i) => {
+    const stats = app.googleplay?.per_date_stats || {};
+    const data = dates.map(d => {
+      const s = stats[d];
+      return (s && s.count > 0) ? s.avg_rating : null;
+    });
+    return {
+      label: app.name,
+      data,
+      borderColor: COLORS[i % COLORS.length],
+      backgroundColor: COLORS[i % COLORS.length] + '20',
+      borderWidth: 2,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.3,
+      spanGaps: true,
+    };
+  });
+
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: dates, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { beginAtZero: false, min: 1, max: 5, title: { display: true, text: '日均评分', color: 'rgba(255,255,255,0.5)' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+        x: { ticks: { color: 'rgba(255,255,255,0.6)', maxRotation: 45 } }
+      },
+      plugins: {
+        legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.raw;
+              if (v === null) return `${ctx.dataset.label}: 无数据`;
+              const d = ctx.label;
+              const stats = (fullData.apps[ctx.datasetIndex]?.googleplay?.per_date_stats || {})[d];
+              return `${ctx.dataset.label}: ${v}★ (${stats?.count || 0}条)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderTagChart(reviews) {
+  const ctx = document.getElementById('tagChart').getContext('2d');
+  if (tagChart) tagChart.destroy();
+  document.getElementById('tagChartTitle').textContent = `🏷️ 标签分布 · ${currentApp || ''}`;
+
+  reviews = reviews || [];
+  reviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
+  const tagCounts = {};
+  reviews.forEach(r => { (r._tags || []).forEach(t => { tagCounts[t.label] = (tagCounts[t.label] || 0) + 1; }); });
+  const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+
+  const colors = ['rgba(239,68,68,0.7)','rgba(249,115,22,0.7)','rgba(234,179,8,0.7)','rgba(132,204,22,0.7)','rgba(34,197,94,0.7)','rgba(96,165,250,0.7)','rgba(167,139,250,0.7)','rgba(244,114,182,0.7)','rgba(251,191,36,0.7)','rgba(52,211,153,0.7)','rgba(248,113,113,0.7)','rgba(148,163,184,0.7)'];
+  tagChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e => e[0]),
+      datasets: [{ label: '提及次数', data: sorted.map(e => e[1]), backgroundColor: sorted.map((_, i) => colors[i % colors.length]), borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+        y: { ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  renderFilterBars(reviews, tagCounts);
+}
+
+// ============ Filter Bars ============
+function renderFilterBars(allReviews, tagCounts) {
+  const dateBar = document.getElementById('dateFilterBar');
+  const dates = [...new Set(allReviews.map(r => r.review_date || '').filter(Boolean))].sort().reverse();
+  let dc = `<span class="filter-label">📅 日期：</span>`;
+  dc += `<span class="filter-chip ${activeReviewDate === 'all' ? 'active' : ''}" onclick="setReviewFilter('date','all')">全部 <span class="chip-count">(${allReviews.length})</span></span>`;
+  dates.forEach(d => {
+    const cnt = allReviews.filter(r => r.review_date === d).length;
+    dc += `<span class="filter-chip ${activeReviewDate === d ? 'active' : ''}" onclick="setReviewFilter('date','${d}')">${d} <span class="chip-count">(${cnt})</span></span>`;
+  });
+  dateBar.innerHTML = dc;
+
+  const ratingBar = document.getElementById('ratingFilterBar');
+  let rc = `<span class="filter-label">⭐ 评分：</span>`;
+  rc += `<span class="filter-chip ${activeRating === 'all' ? 'active' : ''}" onclick="setReviewFilter('rating','all')">全部 <span class="chip-count">(${allReviews.length})</span></span>`;
+  [5,4,3,2,1].forEach(r => {
+    const cnt = allReviews.filter(rv => rv.rating === r).length;
+    rc += `<span class="filter-chip rating-r${r} ${activeRating === String(r) ? 'active' : ''}" onclick="setReviewFilter('rating','${r}')">${r}★ <span class="chip-count">(${cnt})</span></span>`;
+  });
+  ratingBar.innerHTML = rc;
+
+  const tagBar = document.getElementById('tagFilterBar');
+  let tc = `<span class="filter-label">🏷️ 标签：</span>`;
+  tc += `<span class="filter-chip ${activeTag === 'all' ? 'active' : ''}" onclick="setReviewFilter('tag','all')">全部 <span class="chip-count">(${allReviews.length})</span></span>`;
+  const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+  for (const [label, count] of sorted) {
+    tc += `<span class="filter-chip ${activeTag === label ? 'active' : ''}" onclick="setReviewFilter('tag','${escapeHtml(label)}')">${label} <span class="chip-count">(${count})</span></span>`;
+  }
+  tagBar.innerHTML = tc;
+}
+
+function setReviewFilter(type, value) {
+  if (type === 'date') activeReviewDate = value;
+  if (type === 'rating') activeRating = value;
+  if (type === 'tag') activeTag = value;
+  if (currentApp) showReviews(currentApp);
+}
+
+// ============ App Tabs ============
+function renderAppTabs() {
+  const tabs = document.getElementById('appTabs');
+  const appsWithReviews = (fullData.apps || []).filter(a => {
+    const rd = reviewsData[a.name] || {};
+    const perDate = rd.per_date_reviews || {};
+    const legacy = rd.target_reviews || [];
+    return Object.values(perDate).some(arr => arr.length > 0) || legacy.length > 0;
+  });
+
+  tabs.innerHTML = appsWithReviews.map((a, i) => {
+    const icon = a.googleplay?.icon_url || a.appstore?.icon_url || '';
+    const rd = reviewsData[a.name] || {};
+    const perDate = rd.per_date_reviews || {};
+    const legacy = rd.target_reviews || [];
+    const total = Object.values(perDate).reduce((s, arr) => s + arr.length, 0) +
+                  legacy.filter(r => !Object.values(perDate).flat().some(pr => pr.review_id === r.review_id)).length;
+    return `<span class="app-tab ${(currentApp === a.name || (i===0 && !currentApp)) ? 'active' : ''}" onclick="showReviews('${a.name}')">
+      ${icon ? `<img src="${icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
+      ${a.name} (${total})
+    </span>`;
+  }).join('');
+
+  if (appsWithReviews.length > 0 && !currentApp) {
+    currentApp = appsWithReviews[0].name;
+    showReviews(currentApp);
+  } else if (currentApp) {
+    showReviews(currentApp);
+  }
+}
+
+// ============ Review Display ============
+function showReviews(appName) {
+  currentApp = appName;
+  document.querySelectorAll('.app-tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.trim().startsWith(appName));
+  });
+
+  const allReviews = getAllReviewsForApp(appName);
+  allReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
+
+  renderTagChart(allReviews);
+
+  let reviews = allReviews;
+  if (activeReviewDate !== 'all') reviews = reviews.filter(r => r.review_date === activeReviewDate);
+  if (activeRating !== 'all') reviews = reviews.filter(r => r.rating === parseInt(activeRating));
+  if (activeTag !== 'all') reviews = reviews.filter(r => (r._tags || []).some(t => t.label === activeTag));
+
+  const app = appData.find(a => a.name === appName);
+  const dist = app?.googleplay?.target_rating_distribution || {};
+
+  document.getElementById('reviewMetaBar').innerHTML =
+    `共 ${allReviews.length} 条 · 筛选后 ${reviews.length} 条` +
+    `${activeReviewDate !== 'all' ? ' · ' + activeReviewDate : ''}` +
+    `${activeRating !== 'all' ? ' · ' + activeRating + '★' : ''}` +
+    `${activeTag !== 'all' ? ' · ' + activeTag : ''}`;
+
+  const list = document.getElementById('reviewItems');
+  if (reviews.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">🔍</div>无匹配评论</div>`;
+    return;
+  }
+
+  const showCount = Math.min(reviews.length, 100);
+  list.innerHTML = `
+    <div style="padding:10px 18px;background:rgba(96,165,250,0.05);border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:0.82em;color:var(--text-dim);">${appName} · ${reviews.length} 条评论${activeTag !== 'all' ? ' · ' + activeTag : ''}</span>
+      ${Object.values(dist).some(v=>v>0) ? `<span style="font-size:0.75em;color:var(--text-dim);">5★${dist[5]||0} · 4★${dist[4]||0} · 3★${dist[3]||0} · 2★${dist[2]||0} · 1★${dist[1]||0}</span>` : ''}
+    </div>
+    ${reviews.slice(0, showCount).map(r => `
+    <div class="review-item">
+      <div class="review-rating r${r.rating}">${r.rating}★</div>
+      <div class="review-body">
+        <div class="review-user">${escapeHtml(r.user_name)} · ${r.review_date || ''}</div>
+        <div class="review-text">${escapeHtml(r.text)}</div>
+        ${(r._tags && r._tags.length > 0) ? `<div class="review-tags">${r._tags.map(t => `<span class="review-tag" onclick="setReviewFilter('tag','${escapeHtml(t.label)}')">${t.label}</span>`).join('')}</div>` : ''}
+        ${r.reply_text ? `<div class="review-reply"><div class="reply-label">💬 开发者回复</div><div class="reply-text">${escapeHtml(r.reply_text)}</div></div>` : ''}
+      </div>
+    </div>`).join('')}
+    ${reviews.length > showCount ? `<div style="padding:12px;text-align:center;color:var(--text-dim);font-size:0.8em;">还有 ${reviews.length - showCount} 条未显示</div>` : ''}
+  `;
+}
+
+// ============ Date Switch ============
+function onDateChange(date) {
+  currentDate = date;
+  activeReviewDate = 'all';
+  activeRating = 'all';
+  activeTag = 'all';
+  appData = buildAppDataForDate(date);
+  renderDateSelector();
+  renderAppCards();
+  renderOverallChart();
+  renderDailyChart();
+  renderAppTabs();
+}
+
+// ============ Init ============
+async function loadData() {
+  try {
+    const resp = await fetch('data.json?t=' + Date.now());
+    fullData = await resp.json();
+
+    // Build allDates from available_dates + per_date_stats
+    const dateSet = new Set(fullData.available_dates || []);
+    for (const app of fullData.apps || []) {
+      for (const d of Object.keys(app.googleplay?.per_date_stats || {})) dateSet.add(d);
+      for (const s of (app.appstore?.daily_stats || [])) dateSet.add(s.date);
+    }
+    if (dateSet.size === 0) dateSet.add(fullData.meta?.target_date || '2026-06-25');
+    allDates = [...dateSet].sort().reverse();
+    currentDate = allDates[0];
+
+    appData = buildAppDataForDate(currentDate);
+
+    document.getElementById('updateTime').textContent = fullData.meta?.fetched_at || '-';
+
+    renderDateSelector();
+    renderAppCards();
+    renderOverallChart();
+    renderDailyChart();
+    renderTrendChart();
+    renderAppTabs();
+
+    // Load reviews separately (optional, fails gracefully)
+    try {
+      const revResp = await fetch('reviews.json?t=' + Date.now());
+      reviewsData = await revResp.json();
+      renderAppTabs(); // re-render tabs with correct review counts
+    } catch (e) {
+      console.warn('reviews.json not available (reviews disabled):', e.message);
+      reviewsData = {};
+    }
+  } catch (e) {
+    console.error('Failed to load data:', e);
+    document.getElementById('appGrid').innerHTML = `<div style="padding:40px;color:var(--red)">❌ 数据加载失败: ${e.message}</div>`;
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

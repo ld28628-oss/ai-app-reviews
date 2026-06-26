@@ -1,0 +1,1151 @@
+{
+  "meta": {
+    "target_date": "2026-06-25",
+    "fetched_at": "2026-06-26T10:45:40.940836",
+    "total_apps": 7,
+    "update_frequency": "daily",
+    "data_sources": {
+      "appstore": "iTunes Lookup API + RSS reviews feed",
+      "googleplay": "Google Play HTML解析 + batchexecute API"
+    },
+    "note": "整体评分为应用历史累计评分；每日评论数来自RSS/API抓取（受代理可用性影响）"
+  },
+  "apps": [
+    {
+      "name": "Character.AI",
+      "appstore": {
+        "app_name": "Character AI: Chat, Talk, Text",
+        "app_id": "1671705818",
+        "overall_rating": 4.31,
+        "total_reviews_all": 542133,
+        "icon_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/b7/ab/b6/b7abb6ae-8015-55d1-7434-3451d4857d79/AppIcon-0-0-1x_U007ephone-0-1-85-220.png/100x100bb.jpg",
+        "target_date": "2026-06-25",
+        "target_review_count": 0,
+        "target_avg_rating": 4.31,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "target_reviews": [],
+        "daily_note": "RSS未抓取到当日评论数据",
+        "daily_stats": [
+          {
+            "date": "2026-06-24",
+            "count": 34,
+            "avg_rating": 1.74
+          },
+          {
+            "date": "2026-06-23",
+            "count": 81,
+            "avg_rating": 1.99
+          },
+          {
+            "date": "2026-06-22",
+            "count": 67,
+            "avg_rating": 2.1
+          },
+          {
+            "date": "2026-06-21",
+            "count": 68,
+            "avg_rating": 1.74
+          }
+        ]
+      },
+      "googleplay": {
+        "app_name": "Character AI: Chat, Talk, Text",
+        "app_id": "ai.character.app",
+        "overall_rating": 1.9,
+        "total_reviews_all": 2240000,
+        "target_date": "2026-06-25",
+        "target_review_count": 43,
+        "target_avg_rating": 1.63,
+        "target_rating_distribution": {
+          "1": 34,
+          "2": 2,
+          "3": 0,
+          "4": 3,
+          "5": 4
+        },
+        "daily_note": "GP数据获取失败，使用上次的整体数据",
+        "icon_url": "https://play-lh.googleusercontent.com/dAVjIN_4fDErGgl_zMmb81QQSckVOg5LhpMR5liy5QrE8sglxM26MyCgIxsd5qzFyzHfGskqYpjwGD-LXt9Ugw4",
+        "per_date_stats": {
+          "2026-06-25": {
+            "count": 43,
+            "avg_rating": 1.63,
+            "dist": {
+              "1": 34,
+              "2": 2,
+              "3": 0,
+              "4": 3,
+              "5": 4
+            }
+          },
+          "2026-06-24": {
+            "count": 369,
+            "avg_rating": 1.37,
+            "dist": {
+              "1": 314,
+              "2": 20,
+              "3": 10,
+              "4": 5,
+              "5": 20
+            }
+          },
+          "2026-06-23": {
+            "count": 359,
+            "avg_rating": 1.52,
+            "dist": {
+              "1": 289,
+              "2": 24,
+              "3": 8,
+              "4": 7,
+              "5": 31
+            }
+          },
+          "2026-06-22": {
+            "count": 229,
+            "avg_rating": 1.63,
+            "dist": {
+              "1": 178,
+              "2": 12,
+              "3": 7,
+              "4": 9,
+              "5": 23
+            }
+          },
+          "2026-06-21": {
+            "count": 329,
+            "avg_rating": 1.5,
+            "dist": {
+              "1": 267,
+              "2": 19,
+              "3": 9,
+              "4": 8,
+              "5": 26
+            }
+          },
+          "2026-06-20": {
+            "count": 276,
+            "avg_rating": 1.68,
+            "dist": {
+              "1": 215,
+              "2": 9,
+              "3": 9,
+              "4": 12,
+              "5": 31
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "PolyBuzz",
+      "appstore": {
+        "app_name": "PolyBuzz: Chat with Characters",
+        "app_id": "6449190344",
+        "overall_rating": 4.45,
+        "total_reviews_all": 434435,
+        "icon_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/23/b1/b3/23b1b327-04eb-95d0-b1b7-7cd29e887786/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/100x100bb.jpg",
+        "target_date": "2026-06-25",
+        "target_review_count": 0,
+        "target_avg_rating": 4.45,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "target_reviews": [],
+        "daily_note": "RSS未抓取到当日评论数据",
+        "daily_stats": [
+          {
+            "date": "2026-06-24",
+            "count": 23,
+            "avg_rating": 3.35
+          },
+          {
+            "date": "2026-06-23",
+            "count": 54,
+            "avg_rating": 3.56
+          },
+          {
+            "date": "2026-06-22",
+            "count": 64,
+            "avg_rating": 3.52
+          },
+          {
+            "date": "2026-06-21",
+            "count": 60,
+            "avg_rating": 3.23
+          },
+          {
+            "date": "2026-06-20",
+            "count": 40,
+            "avg_rating": 3.7
+          },
+          {
+            "date": "2026-06-19",
+            "count": 9,
+            "avg_rating": 4.56
+          }
+        ]
+      },
+      "googleplay": {
+        "app_name": "PolyBuzz: Chat with AI Friends",
+        "app_id": "ai.socialapps.speakmaster",
+        "overall_rating": 4,
+        "total_reviews_all": 1070000,
+        "target_date": "2026-06-25",
+        "target_review_count": 20,
+        "target_avg_rating": 3.5,
+        "target_rating_distribution": {
+          "1": 4,
+          "2": 1,
+          "3": 4,
+          "4": 3,
+          "5": 8
+        },
+        "daily_note": "GP数据获取失败，使用上次的整体数据",
+        "icon_url": "https://play-lh.googleusercontent.com/w6j4BXhnJm7Atki9psCVHBopdNiV_B8vOtyTcHUnp3DWTg3nbfUXEDQvmm1BnxUtNdUelr20PRzsmtlGb6Klf3A",
+        "per_date_stats": {
+          "2026-06-25": {
+            "count": 20,
+            "avg_rating": 3.5,
+            "dist": {
+              "1": 4,
+              "2": 1,
+              "3": 4,
+              "4": 3,
+              "5": 8
+            }
+          },
+          "2026-06-24": {
+            "count": 123,
+            "avg_rating": 3.35,
+            "dist": {
+              "1": 34,
+              "2": 11,
+              "3": 10,
+              "4": 14,
+              "5": 54
+            }
+          },
+          "2026-06-23": {
+            "count": 57,
+            "avg_rating": 3.42,
+            "dist": {
+              "1": 15,
+              "2": 5,
+              "3": 3,
+              "4": 9,
+              "5": 25
+            }
+          },
+          "2026-06-22": {
+            "count": 126,
+            "avg_rating": 3.47,
+            "dist": {
+              "1": 36,
+              "2": 6,
+              "3": 8,
+              "4": 15,
+              "5": 61
+            }
+          },
+          "2026-06-21": {
+            "count": 74,
+            "avg_rating": 3.03,
+            "dist": {
+              "1": 23,
+              "2": 9,
+              "3": 8,
+              "4": 11,
+              "5": 23
+            }
+          },
+          "2026-06-20": {
+            "count": 45,
+            "avg_rating": 3.62,
+            "dist": {
+              "1": 10,
+              "2": 2,
+              "3": 5,
+              "4": 6,
+              "5": 22
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Talkie Lab",
+      "appstore": {
+        "app_name": "Talkie Lab - AI Playground",
+        "app_id": "6740326134",
+        "overall_rating": 4.74,
+        "total_reviews_all": 47315,
+        "icon_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/c9/03/74/c903741e-a0ee-78da-36a3-bd42cffff5ed/AppIcon-0-0-1x_U007ephone-0-1-0-85-220.png/100x100bb.jpg",
+        "target_date": "2026-06-25",
+        "target_review_count": 0,
+        "target_avg_rating": 4.74,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "target_reviews": [],
+        "daily_note": "RSS未抓取到当日评论数据",
+        "daily_stats": [
+          {
+            "date": "2026-06-24",
+            "count": 5,
+            "avg_rating": 2.6
+          },
+          {
+            "date": "2026-06-23",
+            "count": 8,
+            "avg_rating": 3.38
+          },
+          {
+            "date": "2026-06-22",
+            "count": 9,
+            "avg_rating": 3.67
+          },
+          {
+            "date": "2026-06-21",
+            "count": 6,
+            "avg_rating": 3.83
+          },
+          {
+            "date": "2026-06-20",
+            "count": 4,
+            "avg_rating": 3.75
+          },
+          {
+            "date": "2026-06-19",
+            "count": 6,
+            "avg_rating": 4.33
+          },
+          {
+            "date": "2026-06-18",
+            "count": 9,
+            "avg_rating": 4.33
+          },
+          {
+            "date": "2026-06-17",
+            "count": 5,
+            "avg_rating": 4.2
+          },
+          {
+            "date": "2026-06-16",
+            "count": 6,
+            "avg_rating": 4.67
+          },
+          {
+            "date": "2026-06-15",
+            "count": 8,
+            "avg_rating": 4.25
+          },
+          {
+            "date": "2026-06-14",
+            "count": 15,
+            "avg_rating": 3.67
+          },
+          {
+            "date": "2026-06-13",
+            "count": 9,
+            "avg_rating": 4.44
+          },
+          {
+            "date": "2026-06-12",
+            "count": 8,
+            "avg_rating": 3.88
+          },
+          {
+            "date": "2026-06-11",
+            "count": 8,
+            "avg_rating": 4.25
+          },
+          {
+            "date": "2026-06-10",
+            "count": 8,
+            "avg_rating": 3.62
+          }
+        ]
+      },
+      "googleplay": {
+        "app_name": "Talkie: Creative AI Community",
+        "app_id": "com.weaver.app.prod",
+        "overall_rating": 4.5,
+        "total_reviews_all": 786000,
+        "target_date": "2026-06-25",
+        "target_review_count": 6,
+        "target_avg_rating": 3.83,
+        "target_rating_distribution": {
+          "1": 1,
+          "2": 0,
+          "3": 1,
+          "4": 1,
+          "5": 3
+        },
+        "daily_note": "GP数据获取失败，使用上次的整体数据",
+        "icon_url": "https://play-lh.googleusercontent.com/GM02mKcIM9vP5Ogj5JWTh8iEQHB1kW_VsNWxB2Uw3GWbBhuzNOWFuZBrFcK-ngcIfWkjqsuxfOAjnnxBbt62",
+        "per_date_stats": {
+          "2026-06-25": {
+            "count": 6,
+            "avg_rating": 3.83,
+            "dist": {
+              "1": 1,
+              "2": 0,
+              "3": 1,
+              "4": 1,
+              "5": 3
+            }
+          },
+          "2026-06-24": {
+            "count": 91,
+            "avg_rating": 3.85,
+            "dist": {
+              "1": 17,
+              "2": 5,
+              "3": 5,
+              "4": 12,
+              "5": 52
+            }
+          },
+          "2026-06-23": {
+            "count": 92,
+            "avg_rating": 4.14,
+            "dist": {
+              "1": 10,
+              "2": 4,
+              "3": 6,
+              "4": 15,
+              "5": 57
+            }
+          },
+          "2026-06-22": {
+            "count": 11,
+            "avg_rating": 4.09,
+            "dist": {
+              "1": 1,
+              "2": 1,
+              "3": 1,
+              "4": 1,
+              "5": 7
+            }
+          },
+          "2026-06-21": {
+            "count": 87,
+            "avg_rating": 3.99,
+            "dist": {
+              "1": 13,
+              "2": 5,
+              "3": 5,
+              "4": 11,
+              "5": 53
+            }
+          },
+          "2026-06-20": {
+            "count": 108,
+            "avg_rating": 4.09,
+            "dist": {
+              "1": 16,
+              "2": 4,
+              "3": 6,
+              "4": 10,
+              "5": 72
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "EMOCHI World",
+      "appstore": {
+        "app_name": "EMOCHI World: AI Story Chat",
+        "app_id": "6758488675",
+        "overall_rating": 4.63,
+        "total_reviews_all": 2694,
+        "icon_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3a/9c/e6/3a9ce618-e3c4-2c07-fac0-5e0a89cb1e6d/AppIcon-0-0-1x_U007ephone-0-1-0-85-220.png/100x100bb.jpg",
+        "target_date": "2026-06-25",
+        "target_review_count": 0,
+        "target_avg_rating": 4.63,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "target_reviews": [],
+        "daily_note": "RSS未抓取到当日评论数据",
+        "daily_stats": [
+          {
+            "date": "2026-06-23",
+            "count": 1,
+            "avg_rating": 3
+          },
+          {
+            "date": "2026-06-22",
+            "count": 3,
+            "avg_rating": 4
+          },
+          {
+            "date": "2026-06-21",
+            "count": 1,
+            "avg_rating": 5
+          },
+          {
+            "date": "2026-06-20",
+            "count": 7,
+            "avg_rating": 4.29
+          },
+          {
+            "date": "2026-06-19",
+            "count": 3,
+            "avg_rating": 4.67
+          },
+          {
+            "date": "2026-06-18",
+            "count": 1,
+            "avg_rating": 4
+          },
+          {
+            "date": "2026-06-17",
+            "count": 3,
+            "avg_rating": 5
+          },
+          {
+            "date": "2026-06-16",
+            "count": 3,
+            "avg_rating": 3
+          },
+          {
+            "date": "2026-06-15",
+            "count": 6,
+            "avg_rating": 4
+          },
+          {
+            "date": "2026-06-14",
+            "count": 3,
+            "avg_rating": 3.67
+          },
+          {
+            "date": "2026-06-13",
+            "count": 2,
+            "avg_rating": 4.5
+          },
+          {
+            "date": "2026-06-12",
+            "count": 4,
+            "avg_rating": 4.5
+          },
+          {
+            "date": "2026-06-11",
+            "count": 2,
+            "avg_rating": 3.5
+          },
+          {
+            "date": "2026-06-10",
+            "count": 2,
+            "avg_rating": 5
+          },
+          {
+            "date": "2026-06-08",
+            "count": 1,
+            "avg_rating": 1
+          }
+        ]
+      },
+      "googleplay": {
+        "app_name": "Emochi: Chat With Character",
+        "app_id": "com.flow.mobile",
+        "overall_rating": 4.5,
+        "total_reviews_all": 755000,
+        "target_date": "2026-06-25",
+        "target_review_count": 15,
+        "target_avg_rating": 3.73,
+        "target_rating_distribution": {
+          "1": 4,
+          "2": 0,
+          "3": 1,
+          "4": 1,
+          "5": 9
+        },
+        "daily_note": "GP数据获取失败，使用上次的整体数据",
+        "icon_url": "https://play-lh.googleusercontent.com/Z_Q4ByRheeuxDkZbyUXoxVoC1uUImtlcL6709c54T5w4IRZY-84FdDlLqw84A-LntQWMrfpjIyAblURwnP9eLw",
+        "per_date_stats": {
+          "2026-06-25": {
+            "count": 15,
+            "avg_rating": 3.73,
+            "dist": {
+              "1": 4,
+              "2": 0,
+              "3": 1,
+              "4": 1,
+              "5": 9
+            }
+          },
+          "2026-06-24": {
+            "count": 185,
+            "avg_rating": 4.25,
+            "dist": {
+              "1": 5,
+              "2": 6,
+              "3": 27,
+              "4": 46,
+              "5": 101
+            }
+          },
+          "2026-06-23": {
+            "count": 177,
+            "avg_rating": 4.08,
+            "dist": {
+              "1": 20,
+              "2": 5,
+              "3": 13,
+              "4": 42,
+              "5": 97
+            }
+          },
+          "2026-06-22": {
+            "count": 160,
+            "avg_rating": 4.09,
+            "dist": {
+              "1": 14,
+              "2": 6,
+              "3": 19,
+              "4": 34,
+              "5": 87
+            }
+          },
+          "2026-06-21": {
+            "count": 205,
+            "avg_rating": 4.06,
+            "dist": {
+              "1": 19,
+              "2": 14,
+              "3": 18,
+              "4": 38,
+              "5": 116
+            }
+          },
+          "2026-06-20": {
+            "count": 214,
+            "avg_rating": 4.12,
+            "dist": {
+              "1": 20,
+              "2": 14,
+              "3": 12,
+              "4": 43,
+              "5": 125
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Chai",
+      "appstore": {
+        "app_name": "CHAI: Social AI Platform- Chat",
+        "app_id": "1544750895",
+        "overall_rating": 4.36,
+        "total_reviews_all": 256018,
+        "icon_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/c1/4c/fc/c14cfcf2-488e-bcb2-577b-c00630e3ebeb/AppIcon-dark-0-0-1x_U007emarketing-0-11-0-85-220.png/100x100bb.jpg",
+        "target_date": "2026-06-25",
+        "target_review_count": 0,
+        "target_avg_rating": 4.36,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "target_reviews": [],
+        "daily_note": "RSS未抓取到当日评论数据",
+        "daily_stats": [
+          {
+            "date": "2026-06-24",
+            "count": 22,
+            "avg_rating": 3.5
+          },
+          {
+            "date": "2026-06-23",
+            "count": 39,
+            "avg_rating": 2.97
+          },
+          {
+            "date": "2026-06-22",
+            "count": 35,
+            "avg_rating": 3.34
+          },
+          {
+            "date": "2026-06-21",
+            "count": 62,
+            "avg_rating": 2.81
+          },
+          {
+            "date": "2026-06-20",
+            "count": 62,
+            "avg_rating": 3.16
+          },
+          {
+            "date": "2026-06-19",
+            "count": 30,
+            "avg_rating": 2.97
+          }
+        ]
+      },
+      "googleplay": {
+        "app_name": "Chai: Chat AI Platform",
+        "app_id": "com.Beauchamp.Messenger.external",
+        "overall_rating": 2.8,
+        "total_reviews_all": 796000,
+        "target_date": "2026-06-25",
+        "target_review_count": 20,
+        "target_avg_rating": 2.15,
+        "target_rating_distribution": {
+          "1": 14,
+          "2": 0,
+          "3": 0,
+          "4": 1,
+          "5": 5
+        },
+        "daily_note": "GP数据获取失败，使用上次的整体数据",
+        "icon_url": "https://play-lh.googleusercontent.com/hevRwwGTEnzHMCEmRvWnamT__4_-xWn0IIQMoUwK8r8DcitBqQ_LeJF3sXEi1sV16rJqAW5sJ42tvV_GRQEw",
+        "per_date_stats": {
+          "2026-06-25": {
+            "count": 20,
+            "avg_rating": 2.15,
+            "dist": {
+              "1": 14,
+              "2": 0,
+              "3": 0,
+              "4": 1,
+              "5": 5
+            }
+          },
+          "2026-06-24": {
+            "count": 201,
+            "avg_rating": 1.6,
+            "dist": {
+              "1": 159,
+              "2": 8,
+              "3": 9,
+              "4": 5,
+              "5": 20
+            }
+          },
+          "2026-06-23": {
+            "count": 179,
+            "avg_rating": 1.75,
+            "dist": {
+              "1": 132,
+              "2": 12,
+              "3": 7,
+              "4": 4,
+              "5": 24
+            }
+          },
+          "2026-06-22": {
+            "count": 200,
+            "avg_rating": 1.66,
+            "dist": {
+              "1": 154,
+              "2": 13,
+              "3": 3,
+              "4": 8,
+              "5": 22
+            }
+          },
+          "2026-06-21": {
+            "count": 200,
+            "avg_rating": 1.67,
+            "dist": {
+              "1": 149,
+              "2": 15,
+              "3": 9,
+              "4": 8,
+              "5": 19
+            }
+          },
+          "2026-06-20": {
+            "count": 246,
+            "avg_rating": 1.78,
+            "dist": {
+              "1": 177,
+              "2": 19,
+              "3": 9,
+              "4": 8,
+              "5": 33
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "zeta",
+      "appstore": {
+        "app_name": "zeta: AI Chat, Story, Play",
+        "app_id": "1619030760",
+        "overall_rating": 4.68,
+        "total_reviews_all": 11286,
+        "icon_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e3/71/5a/e3715a41-8dd8-c0f4-d34a-e5260078a91e/AppIcon-0-0-1x_U007emarketing-0-11-0-85-220.png/100x100bb.jpg",
+        "target_date": "2026-06-25",
+        "target_review_count": 0,
+        "target_avg_rating": 4.68,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "target_reviews": [],
+        "daily_note": "RSS未抓取到当日评论数据",
+        "daily_stats": [
+          {
+            "date": "2026-06-24",
+            "count": 23,
+            "avg_rating": 3.78
+          },
+          {
+            "date": "2026-06-23",
+            "count": 18,
+            "avg_rating": 3.89
+          },
+          {
+            "date": "2026-06-22",
+            "count": 3,
+            "avg_rating": 3.67
+          },
+          {
+            "date": "2026-06-21",
+            "count": 14,
+            "avg_rating": 3.57
+          },
+          {
+            "date": "2026-06-20",
+            "count": 12,
+            "avg_rating": 3.75
+          },
+          {
+            "date": "2026-06-19",
+            "count": 15,
+            "avg_rating": 3.93
+          },
+          {
+            "date": "2026-06-18",
+            "count": 14,
+            "avg_rating": 4.0
+          },
+          {
+            "date": "2026-06-17",
+            "count": 15,
+            "avg_rating": 3.73
+          },
+          {
+            "date": "2026-06-16",
+            "count": 18,
+            "avg_rating": 3.67
+          },
+          {
+            "date": "2026-06-15",
+            "count": 19,
+            "avg_rating": 3.68
+          },
+          {
+            "date": "2026-06-14",
+            "count": 11,
+            "avg_rating": 3.36
+          },
+          {
+            "date": "2026-06-13",
+            "count": 20,
+            "avg_rating": 3.5
+          },
+          {
+            "date": "2026-06-12",
+            "count": 13,
+            "avg_rating": 4.15
+          },
+          {
+            "date": "2026-06-11",
+            "count": 27,
+            "avg_rating": 4.3
+          },
+          {
+            "date": "2026-06-10",
+            "count": 11,
+            "avg_rating": 4.55
+          }
+        ]
+      },
+      "googleplay": {
+        "app_name": "zeta: AI Chat, Story, Play",
+        "app_id": "com.scatterlab.messenger",
+        "overall_rating": 4.5,
+        "total_reviews_all": 142000,
+        "target_date": "2026-06-23",
+        "target_review_count": 35,
+        "target_avg_rating": 3.94,
+        "target_rating_distribution": {
+          "1": 3,
+          "2": 3,
+          "3": 4,
+          "4": 8,
+          "5": 17
+        },
+        "daily_note": "GP数据获取失败，使用上次的整体数据",
+        "icon_url": "https://play-lh.googleusercontent.com/7BHCCDafgblr3UBNNx-ELJ_Ni1mA_iesxlPnyAQXXR1AeHtjwgNLmSRqWXlJg7EhKuE5__EvkoRmycKTQ3X_",
+        "per_date_stats": {
+          "2026-06-23": {
+            "count": 35,
+            "avg_rating": 3.94,
+            "dist": {
+              "1": 3,
+              "2": 3,
+              "3": 4,
+              "4": 8,
+              "5": 17
+            }
+          },
+          "2026-06-22": {
+            "count": 60,
+            "avg_rating": 3.72,
+            "dist": {
+              "1": 7,
+              "2": 5,
+              "3": 10,
+              "4": 14,
+              "5": 24
+            }
+          },
+          "2026-06-21": {
+            "count": 55,
+            "avg_rating": 3.82,
+            "dist": {
+              "1": 5,
+              "2": 5,
+              "3": 9,
+              "4": 12,
+              "5": 24
+            }
+          },
+          "2026-06-20": {
+            "count": 50,
+            "avg_rating": 3.6,
+            "dist": {
+              "1": 7,
+              "2": 6,
+              "3": 7,
+              "4": 10,
+              "5": 20
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Tipsy",
+      "appstore": {
+        "app_name": "Tipsy Chat: Live Your Story",
+        "app_id": "6572296119",
+        "overall_rating": 4.5,
+        "total_reviews_all": 3525,
+        "icon_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/92/05/b9/9205b9c1-8953-2f7d-e09f-64f8d9c52792/tipsy-0-0-1x_U007epad-0-1-sRGB-85-220.png/100x100bb.jpg",
+        "target_date": "2026-06-25",
+        "target_review_count": 0,
+        "target_avg_rating": 4.5,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "target_reviews": [],
+        "daily_note": "RSS未抓取到当日评论数据",
+        "daily_stats": [
+          {
+            "date": "2026-06-24",
+            "count": 3,
+            "avg_rating": 4.33
+          },
+          {
+            "date": "2026-06-23",
+            "count": 18,
+            "avg_rating": 2.83
+          },
+          {
+            "date": "2026-06-22",
+            "count": 7,
+            "avg_rating": 3.86
+          },
+          {
+            "date": "2026-06-21",
+            "count": 6,
+            "avg_rating": 5.0
+          },
+          {
+            "date": "2026-06-20",
+            "count": 11,
+            "avg_rating": 3.09
+          },
+          {
+            "date": "2026-06-19",
+            "count": 5,
+            "avg_rating": 3.4
+          },
+          {
+            "date": "2026-06-18",
+            "count": 3,
+            "avg_rating": 3.67
+          },
+          {
+            "date": "2026-06-17",
+            "count": 12,
+            "avg_rating": 4.08
+          },
+          {
+            "date": "2026-06-16",
+            "count": 7,
+            "avg_rating": 3.29
+          },
+          {
+            "date": "2026-06-15",
+            "count": 13,
+            "avg_rating": 2.31
+          },
+          {
+            "date": "2026-06-14",
+            "count": 12,
+            "avg_rating": 2.75
+          },
+          {
+            "date": "2026-06-13",
+            "count": 11,
+            "avg_rating": 2.55
+          },
+          {
+            "date": "2026-06-12",
+            "count": 20,
+            "avg_rating": 2.1
+          },
+          {
+            "date": "2026-06-11",
+            "count": 22,
+            "avg_rating": 2.91
+          },
+          {
+            "date": "2026-06-10",
+            "count": 11,
+            "avg_rating": 2.0
+          }
+        ]
+      },
+      "googleplay": {
+        "app_name": "Tipsy Chat: Live Your Story",
+        "app_id": "com.tipsyturbo.app",
+        "overall_rating": 4.1,
+        "total_reviews_all": 15700,
+        "target_date": "2026-06-25",
+        "target_review_count": 2,
+        "target_avg_rating": 5,
+        "target_rating_distribution": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 2
+        },
+        "daily_note": "GP数据获取失败，使用上次的整体数据",
+        "icon_url": "https://play-lh.googleusercontent.com/9qAd92HPOeTrn_BNBYGQ0XNdqXSFgG7JlqkprYtQb5wHZ7HR0fFoa8SfMBhrnnVBUaoiAwc7iBNYXj2DsBOz1Q",
+        "per_date_stats": {
+          "2026-06-25": {
+            "count": 2,
+            "avg_rating": 5,
+            "dist": {
+              "1": 0,
+              "2": 0,
+              "3": 0,
+              "4": 0,
+              "5": 2
+            }
+          },
+          "2026-06-24": {
+            "count": 15,
+            "avg_rating": 3.13,
+            "dist": {
+              "1": 3,
+              "2": 3,
+              "3": 3,
+              "4": 1,
+              "5": 5
+            }
+          },
+          "2026-06-23": {
+            "count": 33,
+            "avg_rating": 2.97,
+            "dist": {
+              "1": 9,
+              "2": 7,
+              "3": 3,
+              "4": 4,
+              "5": 10
+            }
+          },
+          "2026-06-22": {
+            "count": 12,
+            "avg_rating": 3.5,
+            "dist": {
+              "1": 3,
+              "2": 0,
+              "3": 2,
+              "4": 2,
+              "5": 5
+            }
+          },
+          "2026-06-21": {
+            "count": 21,
+            "avg_rating": 3.86,
+            "dist": {
+              "1": 4,
+              "2": 1,
+              "3": 0,
+              "4": 5,
+              "5": 11
+            }
+          },
+          "2026-06-20": {
+            "count": 16,
+            "avg_rating": 3.75,
+            "dist": {
+              "1": 3,
+              "2": 0,
+              "3": 2,
+              "4": 4,
+              "5": 7
+            }
+          }
+        }
+      }
+    }
+  ],
+  "available_dates": [
+    "2026-06-25",
+    "2026-06-24",
+    "2026-06-23",
+    "2026-06-22",
+    "2026-06-21",
+    "2026-06-20"
+  ]
+}
