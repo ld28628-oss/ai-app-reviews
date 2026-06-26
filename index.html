@@ -175,6 +175,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .highlight-box .hl-tags { display: flex; gap: 3px; flex-wrap: wrap; }
 .highlight-box .hl-tags span { font-size: 0.66em; padding: 1px 6px; border-radius: 5px; background: rgba(239,68,68,0.1); color: var(--red); }
 .highlight-box.high .hl-tags span { background: rgba(52,211,153,0.1); color: var(--green); }
+
+/* Trend store switch */
+.trend-store-switch { display: flex; gap: 6px; margin-bottom: 8px; }
+.trend-store-switch .ts-btn { padding: 4px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: var(--text-dim); cursor: pointer; font-size: 0.76em; transition: all 0.2s; }
+.trend-store-switch .ts-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.trend-store-switch .ts-btn.active.gp { background: rgba(52,211,153,0.12); border-color: var(--green); color: var(--green); font-weight: 500; }
+.trend-store-switch .ts-btn.active.as { background: rgba(96,165,250,0.12); border-color: var(--blue); color: var(--blue); font-weight: 500; }
+
+/* AI Summary paragraph */
+.ai-summary-text { background: rgba(167,139,250,0.04); border: 1px solid rgba(167,139,250,0.1); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+.ai-summary-text p { font-size: 0.88em; line-height: 1.8; color: rgba(255,255,255,0.78); margin-bottom: 10px; }
+.ai-summary-text p:last-child { margin-bottom: 0; }
+.ai-summary-text .highlight-stat { color: var(--purple); font-weight: 600; }
+.ai-summary-text .highlight-red { color: var(--red); font-weight: 600; }
+.ai-summary-text .highlight-green { color: var(--green); font-weight: 600; }
+.ai-summary-text .highlight-orange { color: var(--orange); font-weight: 600; }
+.ai-summary-week { font-size: 0.78em; color: var(--text-dim); margin-bottom: 8px; }
+
+/* CN note on highlights */
+.hl-cn-note { font-size: 0.7em; color: var(--text-dim); margin-top: 4px; padding: 3px 6px; background: rgba(255,255,255,0.02); border-radius: 4px; line-height: 1.35; }
 </style>
 </head>
 <body>
@@ -192,6 +212,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 <!-- AI Summary Section -->
 <div class="ai-summary-section" id="aiSummary" style="display:none">
   <h2><span class="dot"></span> AI 竞品洞察 · <span id="summaryDate">-</span></h2>
+  <div class="ai-summary-text" id="summaryText"></div>
   <div class="summary-grid" id="summaryGrid"></div>
   <div class="highlight-section" id="lowSection" style="display:none">
     <h3>🔴 低分预警 · 重点关注</h3>
@@ -220,7 +241,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     </div>
     <!-- Trend chart: full width -->
     <div class="chart-card wide">
-      <h3>📉 每日评分趋势 (Google Play · 近期)</h3>
+      <h3 id="trendChartTitle">📉 每日评分趋势 · Google Play</h3>
+      <div class="trend-store-switch" id="trendStoreSwitch">
+        <span class="ts-btn gp active" onclick="switchTrendStore('googleplay')">🟢 Google Play</span>
+        <span class="ts-btn as" onclick="switchTrendStore('appstore')">🔵 App Store</span>
+      </div>
       <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
     </div>
   </div>
@@ -305,6 +330,7 @@ let allDates = [];        // all available dates (desc)
 let currentDate = '';
 let currentApp = null;
 let currentStore = 'googleplay';  // 'googleplay' | 'appstore'
+let currentTrendStore = 'googleplay'; // trend chart store
 let activeReviewDate = 'all';
 let activeRating = 'all';
 let activeTag = 'all';
@@ -517,79 +543,278 @@ function renderAppCards() {
 }
 
 // ============ AI Summary ============
+// Compute week range: last Friday -> this Thursday
+function computeWeekRange() {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun, ..., 5=Fri, 6=Sat
+  // Find the most recent Thursday (day 4)
+  let daysToThursday;
+  if (dayOfWeek === 4) daysToThursday = 0;    // today is Thursday
+  else if (dayOfWeek === 5) daysToThursday = 1; // Friday -> yesterday
+  else if (dayOfWeek === 6) daysToThursday = 2; // Saturday
+  else daysToThursday = (dayOfWeek < 4) ? (4 - dayOfWeek) : 0;
+  // Actually, correct approach: find last past Thursday
+  if (dayOfWeek >= 4) { daysToThursday = dayOfWeek - 4; }
+  else { daysToThursday = dayOfWeek + 3; }
+
+  const thursday = new Date(now);
+  thursday.setDate(now.getDate() - daysToThursday);
+  thursday.setHours(0, 0, 0, 0);
+
+  const friday = new Date(thursday);
+  friday.setDate(thursday.getDate() - 6);
+
+  const fmt = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const dates = [];
+  let cursor = new Date(friday);
+  while (cursor <= thursday) {
+    dates.push(fmt(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return { friday: fmt(friday), thursday: fmt(thursday), dates, prevFriday: fmt(new Date(friday.getTime() - 7 * 86400000)), prevThursday: fmt(new Date(thursday.getTime() - 7 * 86400000)) };
+}
+
+// Build per-date avg rating for App Store from asReviewsData
+function computeASPerDateStats() {
+  const stats = {}; // { appName: { 'yyyy-mm-dd': {avg, count} } }
+  for (const [appName, info] of Object.entries(asReviewsData)) {
+    stats[appName] = {};
+    for (const [date, reviews] of Object.entries(info.per_date_reviews || {})) {
+      const ratings = reviews.map(r => r.rating).filter(r => r > 0);
+      if (ratings.length > 0) {
+        stats[appName][date] = {
+          avg_rating: +(ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2),
+          count: ratings.length,
+        };
+      }
+    }
+  }
+  return stats;
+}
+
 function computeAISummary() {
-  const today = currentDate;
-  const yesterday = allDates.length > 1 ? allDates[1] : null;
-  if (!today || !fullData) return [];
+  const week = computeWeekRange();
+  if (!week || !fullData) return { week, summaries: [] };
 
-  return (fullData.apps || []).map(app => {
+  const summaries = (fullData.apps || []).map(app => {
     const gp = app.googleplay || {};
-    const gpToday = gp.per_date_stats?.[today] || {};
-    const gpYesterday = yesterday ? (gp.per_date_stats?.[yesterday] || {}) : {};
+    const gpStats = gp.per_date_stats || {};
 
-    const todayCnt = gpToday.count || 0;
-    const yesCnt = gpYesterday.count || 0;
-    const todayAvg = gpToday.avg_rating || 0;
-    const yesAvg = gpYesterday.avg_rating || 0;
+    // Aggregate GP data over the week
+    let gpWeekRatings = 0, gpWeekCount = 0, gpWeekDays = 0;
+    let gpPrevRatings = 0, gpPrevCount = 0, gpPrevDays = 0;
+    for (const d of week.dates) {
+      const s = gpStats[d];
+      if (s && s.count > 0) { gpWeekRatings += s.avg_rating * s.count; gpWeekCount += s.count; gpWeekDays++; }
+    }
+    const prevWeekStart = week.prevFriday;
+    const prevWeekEnd = week.prevThursday;
+    // Previous week dates
+    const prevDates = [];
+    let c = new Date(week.prevFriday + 'T00:00:00');
+    const end = new Date(week.prevThursday + 'T00:00:00');
+    while (c <= end) {
+      prevDates.push(c.toISOString().slice(0, 10));
+      c.setDate(c.getDate() + 1);
+    }
+    for (const d of prevDates) {
+      const s = gpStats[d];
+      if (s && s.count > 0) { gpPrevRatings += s.avg_rating * s.count; gpPrevCount += s.count; gpPrevDays++; }
+    }
 
-    // Count change %
-    const countChg = yesCnt > 0 ? Math.round((todayCnt - yesCnt) / yesCnt * 100) : (todayCnt > 0 ? 100 : 0);
-    // Rating change
-    const ratingDelta = yesAvg > 0 ? (todayAvg - yesAvg).toFixed(2) : 0;
+    const gpAvg = gpWeekCount > 0 ? +(gpWeekRatings / gpWeekCount).toFixed(2) : 0;
+    const gpPrevAvg = gpPrevCount > 0 ? +(gpPrevRatings / gpPrevCount).toFixed(2) : 0;
+    const gpRatingDelta = gpPrevAvg > 0 ? (gpAvg - gpPrevAvg).toFixed(2) : 0;
+    const gpCountChg = gpPrevCount > 0 ? Math.round((gpWeekCount - gpPrevCount) / gpPrevCount * 100) : (gpWeekCount > 0 ? 100 : 0);
 
-    // Tag distribution from today's reviews
+    // Aggregate AS data over the week
+    const asData = asReviewsData[app.name] || {};
+    const asPerDate = asData.per_date_reviews || {};
+    let asWeekRatings = 0, asWeekCount = 0;
+    let asPrevRatings = 0, asPrevCount = 0;
+    for (const d of week.dates) {
+      const revs = asPerDate[d] || [];
+      revs.forEach(r => { asWeekRatings += r.rating; asWeekCount++; });
+    }
+    for (const d of prevDates) {
+      const revs = asPerDate[d] || [];
+      revs.forEach(r => { asPrevRatings += r.rating; asPrevCount++; });
+    }
+    const asAvg = asWeekCount > 0 ? +(asWeekRatings / asWeekCount).toFixed(2) : 0;
+    const asPrevAvg = asPrevCount > 0 ? +(asPrevRatings / asPrevCount).toFixed(2) : 0;
+    const asRatingDelta = asPrevAvg > 0 ? (asAvg - asPrevAvg).toFixed(2) : 0;
+    const asCountChg = asPrevCount > 0 ? Math.round((asWeekCount - asPrevCount) / asPrevCount * 100) : (asWeekCount > 0 ? 100 : 0);
+
+    // Tag distribution from week's reviews (both stores)
     const allReviews = getAllReviewsAllStores(app.name);
-    const todayReviews = allReviews.filter(r => r.review_date === today);
-    todayReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
+    const weekReviews = allReviews.filter(r => week.dates.includes(r.review_date));
+    weekReviews.forEach(r => { if (!r._tags) r._tags = classifyReview(r.text, r.rating); });
     const tagCounts = {};
-    todayReviews.forEach(r => { (r._tags || []).forEach(t => { tagCounts[t.label] = (tagCounts[t.label] || 0) + 1; }); });
-    const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    weekReviews.forEach(r => { (r._tags || []).forEach(t => { tagCounts[t.label] = (tagCounts[t.label] || 0) + 1; }); });
+    const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
-    // Low rating cases (1-2 star, meaningful text)
-    const lowCases = todayReviews
+    // All week reviews for rating distribution
+    const totalWeekReviews = gpWeekCount + asWeekCount;
+    const ratingDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    weekReviews.forEach(r => { if (r.rating >= 1 && r.rating <= 5) ratingDist[r.rating]++; });
+
+    // Low rating cases (1-2 star, meaningful text) from the week
+    const lowCases = weekReviews
       .filter(r => r.rating <= 2 && r.text && r.text.length > 25)
       .sort((a, b) => a.rating - b.rating || b.text.length - a.text.length)
       .slice(0, 1);
 
     // High value positive (4-5 star, substantial text)
-    const highCases = todayReviews
+    const highCases = weekReviews
       .filter(r => r.rating >= 4 && r.text && r.text.length > 50)
       .sort((a, b) => b.text.length - a.text.length)
       .slice(0, 1);
 
+    // Find the most common tag
+    const dominantTag = topTags.length > 0 ? topTags[0][0] : '';
+
     return {
       name: app.name,
       icon: gp.icon_url || (app.appstore || {}).icon_url || '',
-      todayRating: todayAvg,
-      ratingDelta: parseFloat(ratingDelta),
-      todayCount: todayCnt,
-      countChg,
-      topTags,
-      lowCases,
-      highCases,
-      alarmLevel: todayAvg <= 2 ? 'alarm' : (todayAvg <= 3.5 ? 'warn' : 'ok'),
+      gpAvg, gpRatingDelta: parseFloat(gpRatingDelta), gpWeekCount, gpCountChg, gpPrevCount,
+      asAvg, asRatingDelta: parseFloat(asRatingDelta), asWeekCount, asCountChg, asPrevCount,
+      totalWeekReviews, ratingDist,
+      topTags, dominantTag,
+      lowCases, highCases,
+      alarmLevel: gpAvg > 0 && gpAvg <= 2 ? 'alarm' : (gpAvg > 0 && gpAvg <= 3.5 ? 'warn' : 'ok'),
     };
   });
+
+  return { week, summaries };
+}
+
+// Simple English-to-Chinese key concept mapper for summary notes
+function cnTagNote(text, tags) {
+  const labelCn = {
+    '🔞 内容安全': '涉黄涉暴/未成年安全',
+    '📢 广告体验': '广告太多影响体验',
+    '💳 付费订阅': '付费/订阅价格争议',
+    '🎨 审核过严': '内容审查过于严格',
+    '🤖 AI质量': 'AI回复质量下降',
+    '🐛 技术Bug': '技术故障/Bug',
+    '📉 产品衰退': '产品体验下滑',
+    '💡 功能建议': '用户功能建议',
+    '🆔 验证隐私': '年龄验证/隐私问题',
+    '🚫 功能限制': '功能受限/限制',
+    '⚠️ 其他问题': '其他问题',
+  };
+  return (tags || []).map(t => labelCn[t.label] || t.label).join('、');
 }
 
 function renderAISummary() {
-  const summaries = computeAISummary();
+  const { week, summaries } = computeAISummary();
   if (!summaries.length) return;
 
   const section = document.getElementById('aiSummary');
   section.style.display = '';
-  document.getElementById('summaryDate').textContent = currentDate;
+  document.getElementById('summaryDate').textContent = `${week.friday} ~ ${week.thursday}（周报）`;
 
-  // Summary cards: quick metrics per app
+  // ===== Generate Chinese Summary Paragraph =====
+  const totalGP = summaries.reduce((s, a) => s + a.gpWeekCount, 0);
+  const totalAS = summaries.reduce((s, a) => s + a.asWeekCount, 0);
+  const allWeekReviews = summaries.reduce((s, a) => s + a.totalWeekReviews, 0);
+
+  // Find apps sorted by GP rating
+  const byGpRating = [...summaries].filter(s => s.gpAvg > 0).sort((a, b) => b.gpAvg - a.gpAvg);
+  const best = byGpRating[0];
+  const worst = byGpRating[byGpRating.length - 1];
+
+  // Worst low-score cases
+  const allLowCases = [];
+  summaries.forEach(s => s.lowCases.forEach(c => allLowCases.push({ app: s.name, ...c })));
+  allLowCases.sort((a, b) => (a.rating || 3) - (b.rating || 3));
+  const topLow = allLowCases.slice(0, 3);
+
+  // Aggregate dominant tags across all apps
+  const globalTagCounts = {};
+  summaries.forEach(s => s.topTags.forEach(([label, cnt]) => { globalTagCounts[label] = (globalTagCounts[label] || 0) + cnt; }));
+  const topGlobalTags = Object.entries(globalTagCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  const posChange = s => s > 0 ? '↑' + s : (s < 0 ? '↓' + Math.abs(s) : '→0');
+
+  let summaryHtml = `<div class="ai-summary-week">📅 统计周期：${week.friday} ~ ${week.thursday}（上周五 至 本周四）· 覆盖 ${summaries.length} 款竞品 · 共 ${allWeekReviews} 条用户评论（GP ${totalGP}条 + App Store ${totalAS}条）</div>`;
+
+  // Paragraph 1: Overall situation
+  summaryHtml += `<p>📊 <b>整体态势：</b>`;
+
+  // Mention best and worst
+  if (best && best.gpAvg > 0) {
+    summaryHtml += `Google Play 侧，<span class="highlight-stat">${best.name}</span> 周均评分 <span class="highlight-green">${best.gpAvg.toFixed(2)}★</span> 领跑`;
+    if (best.gpRatingDelta > 0) summaryHtml += `（环比 <span class="highlight-green">↑${best.gpRatingDelta.toFixed(1)}</span>）`;
+    else if (best.gpRatingDelta < 0) summaryHtml += `（环比 <span class="highlight-red">↓${Math.abs(best.gpRatingDelta).toFixed(1)}</span>）`;
+    summaryHtml += `；`;
+  }
+  if (worst && worst !== best && worst.gpAvg > 0) {
+    summaryHtml += `<span class="highlight-stat">${worst.name}</span> 评分垫底为 <span class="highlight-red">${worst.gpAvg.toFixed(2)}★</span>`;
+    if (worst.gpRatingDelta < 0) summaryHtml += `（环比 <span class="highlight-red">↓${Math.abs(worst.gpRatingDelta).toFixed(1)}</span>，持续下滑）`;
+    summaryHtml += `。`;
+  }
+  summaryHtml += `</p>`;
+
+  // Paragraph 2: Key issues summary
+  if (topGlobalTags.length > 0) {
+    summaryHtml += `<p>🔍 <b>核心问题：</b>本周用户反馈集中在 `;
+    summaryHtml += topGlobalTags.map(([label, cnt], i) => {
+      const isCrit = ['🔞 内容安全', '📢 广告体验', '🎨 审核过严'].some(t => label.startsWith(t));
+      return `<span class="${isCrit ? 'highlight-red' : 'highlight-orange'}">${label}</span>（${cnt}次提及）`;
+    }).join('、');
+    summaryHtml += `。`;
+    // Add per-app dominant issue
+    const issueApps = summaries.filter(s => s.dominantTag && s.gpWeekCount > 0);
+    if (issueApps.length > 1) {
+      summaryHtml += `其中 `;
+      summaryHtml += issueApps.map(s => `<span class="highlight-stat">${s.name}</span> 最大痛点为「${s.dominantTag}」`).join('，');
+      summaryHtml += `。`;
+    }
+    summaryHtml += `</p>`;
+  }
+
+  // Paragraph 3: Platform comparison
+  const gpAvgAll = summaries.filter(s => s.gpAvg > 0).reduce((s, a) => s + a.gpAvg, 0);
+  const asAvgAll = summaries.filter(s => s.asAvg > 0).reduce((s, a) => s + a.asAvg, 0);
+  const gpAppCount = summaries.filter(s => s.gpAvg > 0).length;
+  const asAppCount = summaries.filter(s => s.asAvg > 0).length;
+  if (gpAppCount > 0 && asAppCount > 0) {
+    const gpGrand = +(gpAvgAll / gpAppCount).toFixed(2);
+    const asGrand = +(asAvgAll / asAppCount).toFixed(2);
+    summaryHtml += `<p>📱 <b>双平台对比：</b>Google Play 周均 <span class="highlight-stat">${gpGrand}★</span>，App Store 周均 <span class="highlight-stat">${asGrand}★</span>`;
+    if (asGrand > gpGrand) summaryHtml += `，App Store 评分整体 <span class="highlight-green">高于</span> Google Play。`;
+    else summaryHtml += `，Google Play 评分整体 <span class="highlight-green">高于</span> App Store。`;
+    summaryHtml += `</p>`;
+  }
+
+  // Paragraph 4: Low score alert
+  if (topLow.length > 0) {
+    summaryHtml += `<p>⚠️ <b>低分预警：</b>`;
+    summaryHtml += topLow.map(c => {
+      const tagNote = c._tags && c._tags.length > 0 ? `（涉及 ${cnTagNote(c.text, c._tags)}）` : '';
+      return `<span class="highlight-stat">${c.app}</span> 出现 <span class="highlight-red">${c.rating}★</span> 差评${tagNote}`;
+    }).join('；');
+    summaryHtml += `。详情见下方「低分预警」区域。</p>`;
+  }
+
+  document.getElementById('summaryText').innerHTML = summaryHtml;
+
+  // ===== Summary Cards: weekly metrics per app =====
   const grid = document.getElementById('summaryGrid');
   grid.innerHTML = summaries.map(s => {
-    const rDeltaHtml = s.ratingDelta > 0
-      ? `<span class="change-up">↑${s.ratingDelta.toFixed(1)}</span>`
-      : (s.ratingDelta < 0 ? `<span class="change-down">↓${Math.abs(s.ratingDelta).toFixed(1)}</span>` : '<span class="change-flat">→0</span>');
-    const cChgHtml = s.countChg > 0
-      ? `<span class="change-up">+${s.countChg}%</span>`
-      : (s.countChg < 0 ? `<span class="change-down">${s.countChg}%</span>` : '<span class="change-flat">0%</span>');
-    const ratingColor = getRatingColor(s.todayRating);
+    const gpRdHtml = s.gpPrevCount > 0
+      ? `<span class="${s.gpRatingDelta > 0 ? 'change-up' : (s.gpRatingDelta < 0 ? 'change-down' : 'change-flat')}">${posChange(s.gpRatingDelta.toFixed(1))}</span>`
+      : (s.gpAvg > 0 ? '<span class="change-flat">新</span>' : '<span class="change-flat">-</span>');
+    const asRdHtml = s.asPrevCount > 0
+      ? `<span class="${s.asRatingDelta > 0 ? 'change-up' : (s.asRatingDelta < 0 ? 'change-down' : 'change-flat')}">${posChange(s.asRatingDelta.toFixed(1))}</span>`
+      : (s.asAvg > 0 ? '<span class="change-flat">新</span>' : '<span class="change-flat">-</span>');
 
     const tagsHtml = s.topTags.length > 0
       ? s.topTags.map(([label, cnt]) => {
@@ -602,36 +827,35 @@ function renderAISummary() {
       <div class="summary-card-header">
         ${s.icon ? `<img class="summary-card-icon" src="${s.icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
         <span class="summary-card-name">${s.name}</span>
+        <span style="font-size:0.7em;color:var(--text-dim)">${s.totalWeekReviews}条</span>
       </div>
       <div class="summary-metrics">
-        <span class="summary-metric">日评分 <b style="color:${ratingColor}">${s.todayRating.toFixed(2)}</b> ${rDeltaHtml}</span>
-        <span class="summary-metric">评论 <b>${s.todayCount}</b> ${cChgHtml}</span>
+        ${s.gpAvg > 0 ? `<span class="summary-metric">GP <b style="color:${getRatingColor(s.gpAvg)}">${s.gpAvg.toFixed(2)}★</b> ${gpRdHtml}</span>` : ''}
+        ${s.asAvg > 0 ? `<span class="summary-metric">AS <b style="color:${getRatingColor(s.asAvg)}">${s.asAvg.toFixed(2)}★</b> ${asRdHtml}</span>` : ''}
       </div>
       <div class="summary-tags-row">${tagsHtml}</div>
     </div>`;
   }).join('');
 
-  // Low rating highlights
-  const lowAll = [];
-  summaries.forEach(s => {
-    s.lowCases.forEach(c => lowAll.push({ app: s.name, icon: s.icon, ...c }));
-  });
-  lowAll.sort((a, b) => (a.rating || 3) - (b.rating || 3));
-  const topLow = lowAll.slice(0, 4);
+  // ===== Low rating highlights =====
+  allLowCases.sort((a, b) => (a.rating || 3) - (b.rating || 3));
+  const topLow4 = allLowCases.slice(0, 4);
 
   const lowSec = document.getElementById('lowSection');
   const lowGrid = document.getElementById('lowHighlightGrid');
-  if (topLow.length > 0) {
+  if (topLow4.length > 0) {
     lowSec.style.display = '';
-    lowGrid.innerHTML = topLow.map(c => {
+    lowGrid.innerHTML = topLow4.map(c => {
       const text = c.text.length > 180 ? c.text.slice(0, 177) + '...' : c.text;
       const tags = (c._tags || []).map(t => `<span>${t.label}</span>`).join('');
+      const cnNote = cnTagNote(c.text, c._tags);
       return `<div class="highlight-box low">
         <div class="hl-app">
           ${c.icon ? `<img src="${c.icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
-          <b>${c.app}</b> · ${c.review_date || '-'}
+          <b>${c.app}</b> · ${c.review_date || '-'} · ${c.store === 'appstore' ? '🍎 AS' : '🟢 GP'}
         </div>
         <div class="hl-text">${escapeHtml(text)}</div>
+        ${cnNote ? `<div class="hl-cn-note">📌 关键问题：${cnNote}</div>` : ''}
         <div class="hl-meta">
           <span class="hl-rating r${c.rating}">${c.rating}★</span>
           <div class="hl-tags">${tags}</div>
@@ -640,7 +864,7 @@ function renderAISummary() {
     }).join('');
   } else { lowSec.style.display = 'none'; }
 
-  // High value highlights
+  // ===== High value highlights =====
   const highAll = [];
   summaries.forEach(s => {
     s.highCases.forEach(c => highAll.push({ app: s.name, icon: s.icon, ...c }));
@@ -655,12 +879,14 @@ function renderAISummary() {
     highGrid.innerHTML = topHigh.map(c => {
       const text = c.text.length > 200 ? c.text.slice(0, 197) + '...' : c.text;
       const tags = (c._tags || []).map(t => `<span>${t.label}</span>`).join('');
+      const cnNote = cnTagNote(c.text, c._tags);
       return `<div class="highlight-box high">
         <div class="hl-app">
           ${c.icon ? `<img src="${c.icon}" onerror="this.style.display='none'" loading="lazy">` : ''}
-          <b>${c.app}</b> · ${c.review_date || '-'}
+          <b>${c.app}</b> · ${c.review_date || '-'} · ${c.store === 'appstore' ? '🍎 AS' : '🟢 GP'}
         </div>
         <div class="hl-text">${escapeHtml(text)}</div>
+        ${cnNote ? `<div class="hl-cn-note">💡 核心观点：${cnNote}</div>` : ''}
         <div class="hl-meta">
           <span class="hl-rating r${c.rating}">${c.rating}★</span>
           <div class="hl-tags">${tags}</div>
@@ -704,34 +930,57 @@ function renderTrendChart() {
   const ctx = document.getElementById('trendChart').getContext('2d');
   if (trendChart) trendChart.destroy();
 
-  // Collect all dates from all apps' per_date_stats
-  const dateSet = new Set();
-  for (const app of fullData.apps || []) {
-    const stats = app.googleplay?.per_date_stats || {};
-    for (const d of Object.keys(stats)) dateSet.add(d);
-    // Also from appstore daily_stats
-    for (const s of (app.appstore?.daily_stats || [])) dateSet.add(s.date);
-  }
-  const dates = [...dateSet].sort();  // ascending for trend
-
-  // Trim to dates that actually have data (at least one app with nonzero count)
   const APP_COLORS = ['#60a5fa','#34d399','#a78bfa','#fb923c','#f472b6','#fbbf24','#f87171'];
+
+  // Collect dates from selected store
+  const dateSet = new Set();
+  if (currentTrendStore === 'googleplay') {
+    for (const app of fullData.apps || []) {
+      const stats = app.googleplay?.per_date_stats || {};
+      for (const d of Object.keys(stats)) dateSet.add(d);
+    }
+  } else {
+    for (const [appName, info] of Object.entries(asReviewsData)) {
+      for (const d of Object.keys(info.per_date_reviews || {})) dateSet.add(d);
+    }
+  }
+  const dates = [...dateSet].sort();
+
+  // Trim to dates that actually have data
   const hasData = dates.map(d => {
-    return (fullData.apps || []).some(app => {
-      const s = (app.googleplay?.per_date_stats || {})[d];
-      return s && s.count > 0;
-    });
+    if (currentTrendStore === 'googleplay') {
+      return (fullData.apps || []).some(app => {
+        const s = (app.googleplay?.per_date_stats || {})[d];
+        return s && s.count > 0;
+      });
+    } else {
+      return Object.values(asReviewsData).some(info => {
+        return (info.per_date_reviews || {})[d]?.length > 0;
+      });
+    }
   });
   const firstIdx = hasData.findIndex(Boolean);
   const lastIdx = hasData.findLastIndex ? hasData.findLastIndex(Boolean) : hasData.map(Boolean).lastIndexOf(true);
   const chartDates = firstIdx >= 0 ? dates.slice(firstIdx, lastIdx + 1) : dates;
 
   const datasets = (fullData.apps || []).map((app, i) => {
-    const stats = app.googleplay?.per_date_stats || {};
-    const data = chartDates.map(d => {
-      const s = stats[d];
-      return (s && s.count > 0) ? s.avg_rating : null;
-    });
+    let data;
+    if (currentTrendStore === 'googleplay') {
+      const stats = app.googleplay?.per_date_stats || {};
+      data = chartDates.map(d => {
+        const s = stats[d];
+        return (s && s.count > 0) ? s.avg_rating : null;
+      });
+    } else {
+      const asInfo = asReviewsData[app.name] || {};
+      const asPerDate = asInfo.per_date_reviews || {};
+      data = chartDates.map(d => {
+        const revs = asPerDate[d] || [];
+        if (revs.length === 0) return null;
+        const avg = revs.reduce((s, r) => s + r.rating, 0) / revs.length;
+        return +avg.toFixed(2);
+      });
+    }
     return {
       label: app.name,
       data,
@@ -744,6 +993,10 @@ function renderTrendChart() {
       spanGaps: true,
     };
   });
+
+  // Update title
+  document.getElementById('trendChartTitle').textContent =
+    `📉 每日评分趋势 · ${currentTrendStore === 'googleplay' ? 'Google Play' : 'App Store'}`;
 
   trendChart = new Chart(ctx, {
     type: 'line',
@@ -763,14 +1016,30 @@ function renderTrendChart() {
               const v = ctx.raw;
               if (v === null) return `${ctx.dataset.label}: 无数据`;
               const d = ctx.label;
-              const stats = (fullData.apps[ctx.datasetIndex]?.googleplay?.per_date_stats || {})[d];
-              return `${ctx.dataset.label}: ${v}★ (${stats?.count || 0}条)`;
+              let detail = '';
+              if (currentTrendStore === 'googleplay') {
+                const stats = (fullData.apps[ctx.datasetIndex]?.googleplay?.per_date_stats || {})[d];
+                detail = ` (${stats?.count || 0}条)`;
+              } else {
+                const asInfo = asReviewsData[fullData.apps[ctx.datasetIndex]?.name] || {};
+                const revs = (asInfo.per_date_reviews || {})[d] || [];
+                detail = ` (${revs.length}条)`;
+              }
+              return `${ctx.dataset.label}: ${v}★${detail}`;
             }
           }
         }
       }
     }
   });
+}
+
+function switchTrendStore(store) {
+  currentTrendStore = store;
+  document.querySelectorAll('.ts-btn').forEach(b => {
+    b.classList.toggle('active', b.classList.contains(store === 'googleplay' ? 'gp' : 'as'));
+  });
+  renderTrendChart();
 }
 
 function renderTagAppSelector() {
